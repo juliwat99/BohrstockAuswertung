@@ -36,8 +36,8 @@ if st.button("Auswerten"):
 
     # Oberboden-Werte
     ober        = min(horizonte, key=lambda h: h["z_top"])
-    bodenart    = ober["Bodenart"].strip()
-    bg          = bodentyp_to_bg.get(bodenart)
+    bodentyp    = ober["Bodenart"].strip()
+    bg          = bodentyp_to_bg.get(bodentyp)
     ph_wert     = ober["pH"]
     humus_wert  = ober["humus"]
     humus_kat   = humuskategorie(humus_wert)
@@ -55,30 +55,33 @@ if st.button("Auswerten"):
     )
     if msg:
         st.warning(msg)
-        kalk_text = ""
+        kalk_value = ""
     else:
-        st.success(f"Kalkbedarf: {kalk} dt CaO/ha")
-        kalk_text = kalk
+        kalk_value = kalk
 
     # weitere Auswertungen
     _, total_hum = humusvorrat(horizonte)
     nfk = gesamt_nfk(horizonte, phyto)
 
-    # Ergebnisse zusammenstellen
-    res = {
-        "Bodenform":                 bodenform,
-        "Humusvorrat (Mg/ha)":       total_hum * 10,
-        "nFK (mm)":                  nfk,
-        "Kalkbedarf (dt CaO/ha)":    kalk_text
-    }
-    result_df = pd.DataFrame([res])
+    # 5) Ergebnisse in Tabelle zusammenstellen
+    result_df = pd.DataFrame([{
+        "Bodentyp":                             bodentyp,
+        "Bodenform":                            bodenform,
+        "Physiologische Gründigkeit (cm)":      phyto,
+        "Humusvorrat bis 1 m (Mg/ha)":          total_hum * 10,
+        "pH Oberboden":                         ph_wert,
+        "Kalkbedarf (dt CaO/ha)":               kalk_value,
+        "nFK (mm)":                             nfk
+    }])
+
     st.write("### Ergebnisse", result_df)
 
-    # 5) Download als echte Excel-Datei
+    # 6) Download als echte Excel-Datei
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
         result_df.to_excel(writer, index=False)
     buffer.seek(0)
+
     st.download_button(
         "Ergebnis als Excel herunterladen",
         data=buffer,
