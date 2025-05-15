@@ -339,3 +339,42 @@ def main():
         out += '.xlsx'
     df_sum.to_excel(out, index=False)
     print(f"→ '{out}' wurde erzeugt.")
+
+if __name__ == "__main__":
+    main()
+
+    # ——— Debug für Kalkbedarf ———
+    import pandas as pd
+    from bodenauswertung import build_horizonte_list, bodentyp_to_bg, humuskategorie, berechne_kalkbedarf
+
+    # 1) Lies dieselbe Eingabedatei nochmal ein (oder gib hier den Pfad hartkodiert an)
+    df = pd.read_excel("Pfad/zu/deiner_Eingabe.xlsx")
+
+    # 2) Baue die Horizonte-Liste
+    horizonte = build_horizonte_list(df)
+
+    # 3) Nimm den obersten Horizont
+    ober = min(horizonte, key=lambda h: h["z_top"])
+
+    # 4) Ermittle bg, humus-Kategorie und pH
+    bodenart     = ober["Bodenart"].strip()
+    bg           = bodentyp_to_bg.get(bodenart)
+    ph_wert      = ober["pH"]
+    humus_wert   = ober["humus"]
+    humus_kat    = humuskategorie(humus_wert)
+
+    print("DEBUG: bg=", bg)
+    print("DEBUG: Bodenart =>", repr(bodenart))
+    print("DEBUG: pH =", ph_wert)
+    print("DEBUG: humus =", humus_wert, "=> kat", humus_kat)
+
+    # 5) Schau dir die Tabellen-Spalten an
+    df_acker = pd.read_csv("kalkbedarf_acker.csv")
+    print("DEBUG: Verfügbare Humuskategorien in CSV:", df_acker["humus_kat"].unique())
+
+    # 6) Suche simulieren und Ergebnis zeigen
+    kalk, msg = berechne_kalkbedarf(
+        bg, ph_wert, humus_wert, "acker",
+        df_acker, pd.read_csv("kalkbedarf_gruen.csv")
+    )
+    print("DEBUG: berechne_kalkbedarf ->", kalk, msg)
