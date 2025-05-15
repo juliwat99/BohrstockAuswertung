@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from bodenauswertung import humusvorrat, berechne_kalkbedarf, gesamt_nfk, bodentyp_to_bg
+from bodenauswertung import humusvorrat, berechne_kalkbedarf, gesamt_nfk, bodentyp_to_bg, build_horizonte_list
 
 st.title("Bohrstock-Auswertung")
 
