@@ -33,13 +33,29 @@ bodentyp_to_bg = {
     "Mo":6
 }
 
-# (3) Humuskategorie
-def humuskategorie(humus):
-    if humus < 4.1:      return "<4"
-    if humus <= 8.0:     return "4.1-8.0"
-    if humus <= 15.0:    return "8.1-15.0"
-    if humus <= 30.0:    return "15.1-30.0"
-    return ">30.0"
+def humuskategorie(humus, nutzungsart="acker"):
+    """
+    Gibt die Humuskategorie zurück, abhängig von der Nutzungsart.
+    Für Acker:     <4, 4.1-8.0, 8.1-15.0, 15.1-30.0, >30.0
+    Für Grünland:  <15, 15.1-30, >30
+    """
+    if nutzungsart.lower() in ("gruenland", "grünland"):
+        if humus < 15.1:
+            return "<15"
+        if humus <= 30:
+            return "15.1-30"
+        return ">30"
+    else:
+        # Acker-Einteilung wie bisher
+        if humus < 4.1:
+            return "<4"
+        if humus <= 8.0:
+            return "4.1-8.0"
+        if humus <= 15.0:
+            return "8.1-15.0"
+        if humus <= 30.0:
+            return "15.1-30.0"
+        return ">30.0"
 
 
 
