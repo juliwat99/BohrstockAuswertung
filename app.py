@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+import altair as alt
 
 from bodenauswertung import (
     humusvorrat,
@@ -22,12 +23,12 @@ st.set_page_config(
 # — Sidebar für Inputs —
 with st.sidebar:
     st.header("Einstellungen")
-    uploaded = st.file_uploader("Excel/CSV hochladen", type=["xlsx","csv"])
-    nutzung  = st.selectbox("Nutzungsart", ["Acker", "Gruenland"])
-    phyto    = st.number_input("Physio. Gründigkeit (cm)", min_value=10, max_value=500, value=100)
-    bodenform= st.text_input("Bodenform")
+    uploaded  = st.file_uploader("Excel/CSV hochladen", type=["xlsx","csv"])
+    nutzung   = st.selectbox("Nutzungsart", ["Acker", "Gruenland"])
+    phyto     = st.number_input("Physio. Gründigkeit (cm)", min_value=10, max_value=500, value=100)
+    bodenform = st.text_input("Bodenform", "Braunerde")
     st.markdown("---")
-    run = st.button("Auswerten")
+    run       = st.button("Auswerten")
 
 st.title("🌿 Bohrstock-Auswertung")
 
@@ -58,20 +59,45 @@ if run:
     # Tab 2: Verarbeitete Horizonte
     with tab2:
         st.subheader("🔍 Verarbeitete Horizonte")
-        st.dataframe(pd.DataFrame(horizonte), use_container_width=True)
+        horizonte_df = pd.DataFrame(horizonte)
+        st.dataframe(horizonte_df, use_container_width=True)
+
+        # Interaktives Profildiagramm
+        st.markdown("**Interaktives Profildiagramm**")
+        df_plot = horizonte_df.rename(columns={"z_top": "Tiefe [cm]"})
+        df_melt = df_plot.melt(
+            id_vars="Tiefe [cm]",
+            value_vars=["pH", "humus", "bd"],
+            var_name="Parameter",
+            value_name="Wert"
+        )
+        chart = (
+            alt.Chart(df_melt)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("Wert:Q", title="Messwert"),
+                y=alt.Y("Tiefe [cm]:Q", title="Tiefe (cm)", scale=alt.Scale(reverse=True)),
+                color=alt.Color("Parameter:N", title="Parameter"),
+                tooltip=["Parameter","Wert","Tiefe [cm]"]
+            )
+            .properties(height=400)
+        )
+        st.altair_chart(chart, use_container_width=True)
 
     # Oberboden-Werte extrahieren
-    ober       = min(horizonte, key=lambda h: h["z_top"])
-    bodentyp   = ober["Bodenart"].strip()
-    bg         = bodentyp_to_bg.get(bodentyp)
-    ph_wert    = ober["pH"]
-    humus_wert = ober["humus"]
+    ober        = min(horizonte, key=lambda h: h["z_top"])
+    bodentyp    = ober["Bodenart"].strip()
+    bg          = bodentyp_to_bg.get(bodentyp)
+    ph_wert     = ober["pH"]
+    humus_wert  = ober["humus"]
 
     # Kalkbedarf berechnen
     df_acker = pd.read_csv("kalkbedarf_acker.csv")
     df_gruen = pd.read_csv("kalkbedarf_gruen.csv")
     kalk, msg = berechne_kalkbedarf(
-        bg, ph_wert, humus_wert,
+        bg,
+        ph_wert,
+        humus_wert,
         nutzungsart=nutzung.lower(),
         df_acker=df_acker,
         df_gruen=df_gruen
