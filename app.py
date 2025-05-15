@@ -24,9 +24,9 @@ else:
     df = pd.read_csv(uploaded)
 
 # 3) Parameter wählen
-nutzung   = st.selectbox("Nutzungsart", ["acker", "gruenland"])
+nutzung   = st.selectbox("Nutzungsart", ["Acker", "Gruenland"])
 phyto     = st.number_input("Physiologische Gründigkeit (cm)", min_value=10, max_value=500, value=100)
-bodenform = st.text_input("Bodenform (z.B. Hanglage, Talsohle…)", value="")
+bodenform = st.text_input("Bodenform (z.B. Braunerde)", value="")
 
 # 4) Auswertung starten
 if st.button("Auswerten"):
