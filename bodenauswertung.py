@@ -66,7 +66,6 @@ def ph_klasse_bestimmen(bg, kat, pH):
     return None
 
 
-# (5) kalkbedarf
 def berechne_kalkbedarf(bg, pH, humus, nutzungsart, df_acker, df_gruen):
     """
     bg: Bodenartgruppe (1–6)
@@ -76,29 +75,25 @@ def berechne_kalkbedarf(bg, pH, humus, nutzungsart, df_acker, df_gruen):
     df_acker, df_gruen: die DataFrames aus den CSVs
     """
     if pd.isna(pH):
-        # kein pH-Wert: sofort abbrechen
         return None, "Kein pH-Wert im Oberboden angegeben."
 
     # Tabelle wählen
     df = df_acker if nutzungsart=="acker" else df_gruen
 
-    # Humuskategorie bestimmen
-    kat = humuskategorie(humus)
+    # Humuskategorie bestimmen – jetzt mit Nutzungsart!
+    kat = humuskategorie(humus, nutzungsart)
 
     # Filterkriterien
     mask = (
         (df.bg == bg) &
         (df.humus_kat == kat) &
-        # pH_lo ≤ pH OR pH_lo IS NULL
         ((df.pH_lo.isna()) | (df.pH_lo <= pH)) &
-        # pH_hi ≥ pH OR pH_hi IS NULL
         ((df.pH_hi.isna()) | (pH <= df.pH_hi))
     )
     sub = df.loc[mask, "CaO"]
     if sub.empty:
         return None, f"Kein Kalkbedarf für bg={bg}, Humus={kat}, pH={pH} gefunden."
     return float(sub.iloc[0]), None
-
 
 
 # (6) nFK
