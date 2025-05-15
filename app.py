@@ -87,7 +87,7 @@ if run:
         st.subheader("✅ Zusammenfassung")
         # Kennzahlen als Metrics
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Humusvorrat (Mg/ha)", f"{total_hum*10:.1f}")
+        c1.metric("Humusvorrat 1m (Mg/ha)", f"{total_hum*10:.1f}")
         c2.metric("pH Oberboden", f"{ph_wert:.2f}")
         c3.metric("nFK (mm)", f"{nfk:.0f}")
         c4.metric("Kalkbedarf (dt CaO/ha)", f"{kalk_value:.1f}" if kalk_value is not None else "–")
