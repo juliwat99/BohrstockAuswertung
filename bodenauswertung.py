@@ -15,7 +15,8 @@ def humusvorrat(horizonte, max_tiefe=100):
 
 # (2) Bodenart → Bodenartengruppe
 bodentyp_to_bg = {
-    "S":1, "lS":2, "l'S":2, "IS":3,
+    "S":1, "Ss":2, "Sl2":2,"l'S":2, "Sl3":2,
+    "Sl4":3, "Slu":3, "lS":3,
     "sL":4, "uL":4, "Lu":4,
     "t'L":5, "tL":5, "lT":5, "T":5,
     "Mo":6
