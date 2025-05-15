@@ -2,9 +2,6 @@ import pandas as pd
 import re
 
 
-# ——————————————————————————————————————————
-# Vorher definierte Hilfsfunktionen (kopiere sie aus deinem bestehenden Modul)
-# ——————————————————————————————————————————
 # (1) Humusvorrat
 def humusvorrat(horizonte, max_tiefe=100):
     df = pd.DataFrame(horizonte).sort_values("z_top")
@@ -147,7 +144,63 @@ def gesamt_nfk(horizonte, phyto_tiefe=100):
 
     return total_mm
 
+def build_horizonte_list(df):
+    cols = df.columns.tolist()
+    def find_col(*keys):
+        for c in cols:
+            if all(k.lower() in c.lower() for k in keys):
+                return c
+        raise KeyError(f"Keine Spalte mit {keys!r} gefunden.")
+    col_tiefe    = find_col("tiefe")
+    col_bd       = find_col("trocken", "dichte")
+    col_skelett  = find_col("skelett")
+    col_humus    = find_col("humus")
+    col_ph       = find_col("ph")
+    col_bodenart = find_col("bodenart")
+    col_horizont = find_col("horizont")
 
+    # Tiefen splitten
+    depth = df[col_tiefe].astype(str).str.strip()
+    splits = depth.str.split("-", expand=True)
+    df = df.copy()
+    df["z_top"] = pd.to_numeric(splits[0], errors="coerce")
+    df["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
+
+    # Numerisch
+    df[col_bd]      = pd.to_numeric(df[col_bd], errors="coerce")
+    df[col_skelett] = pd.to_numeric(df[col_skelett], errors="coerce")
+    df[col_ph]      = pd.to_numeric(df[col_ph], errors="coerce")
+
+    # Humus parsen
+    def parse_range(val):
+        s = str(val).strip()
+        m = re.match(r"<\s*(\d+(\.\d+)?)", s)
+        if m:
+            return float(m.group(1)) / 2
+        s2 = s.replace("<","").replace(">","").strip()
+        if "-" in s2:
+            lo, hi = s2.split("-",1)
+            try: return (float(lo)+float(hi))/2
+            except: pass
+        try: return float(s2)
+        except: return None
+
+    df["humus_num"] = df[col_humus].apply(parse_range)
+
+    # Liste bauen
+    horizonte = []
+    for _, row in df.iterrows():
+        horizonte.append({
+            "hz":       row[col_horizont],
+            "z_top":    row["z_top"],
+            "z_bot":    row["z_bot"],
+            "bd":       row[col_bd],
+            "humus":    row["humus_num"],
+            "pH":       row[col_ph],
+            "Bodenart": row[col_bodenart],
+            "skelett":  row[col_skelett] or 0
+        })
+    return horizonte
 
 # ——————————————————————————————————————————
 # Hauptprogramm
@@ -286,6 +339,3 @@ def main():
         out += '.xlsx'
     df_sum.to_excel(out, index=False)
     print(f"→ '{out}' wurde erzeugt.")
-
-if __name__ == "__main__":
-    main()
