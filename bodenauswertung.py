@@ -4,11 +4,22 @@ import re
 
 # (1) Humusvorrat
 def humusvorrat(horizonte, max_tiefe=100):
+    """
+    Berechnet den Humusvorrat bis max_tiefe (cm), 
+    füllt fehlende z_bot mit max_tiefe auf.
+    """
     df = pd.DataFrame(horizonte).sort_values("z_top")
-    df["eff_z_bot"] = df["z_bot"].clip(upper=max_tiefe)
+    # Fehlende z_bot bis max_tiefe auffüllen
+    df["z_bot_filled"] = df["z_bot"].fillna(max_tiefe)
+    # effektives Bodenende auf max_tiefe begrenzen
+    df["eff_z_bot"] = df["z_bot_filled"].clip(upper=max_tiefe)
+    # effektive Dicke berechnen
     df["eff_dicke_cm"] = (df["eff_z_bot"] - df["z_top"]).clip(lower=0)
+    # Humusmasse pro cm²
     df["humus_g_cm2"] = (df["humus"] / 100) * df["bd"] * df["eff_dicke_cm"]
+    # Umrechnung in kg/m²
     df["humus_kg_m2"] = df["humus_g_cm2"] * 10
+    # Summe über alle Horizonte mit effektiver Dicke > 0
     total = df.loc[df["eff_dicke_cm"] > 0, "humus_kg_m2"].sum()
     return df, total
 
