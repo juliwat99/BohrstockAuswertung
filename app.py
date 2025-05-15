@@ -69,7 +69,7 @@ if st.button("Auswerten"):
         kalk_value = kalk
 
     # weitere Auswertungen
-    _, total_hum = humusvorrat(horizonte)
+     _, total_hum = humusvorrat(horizonte, max_tiefe=100)
     nfk = gesamt_nfk(horizonte, phyto)
 
     # 5) Ergebnisse in Tabelle zusammenstellen
