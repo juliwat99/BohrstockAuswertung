@@ -11,90 +11,108 @@ from bodenauswertung import (
     humuskategorie
 )
 
-st.title("Bohrstock-Auswertung")
+# — Seite konfigurieren — 
+st.set_page_config(
+    page_title="Bohrstock-Auswertung",
+    page_icon="🌱",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# 1) Datei hochladen
-uploaded = st.file_uploader("Excel- oder CSV-Datei hochladen", type=["xlsx","csv"])
+# — Sidebar für Inputs —
+with st.sidebar:
+    st.header("Einstellungen")
+    uploaded = st.file_uploader("Excel/CSV hochladen", type=["xlsx","csv"])
+    nutzung  = st.selectbox("Nutzungsart", ["Acker", "Gruenland"])
+    phyto    = st.number_input("Physio. Gründigkeit (cm)", min_value=10, max_value=500, value=100)
+    bodenform= st.text_input("Bodenform", "Braunerde")
+    st.markdown("---")
+    run = st.button("Auswerten")
+
+st.title("🌿 Bohrstock-Auswertung")
+
+# — Wenn noch nichts hochgeladen — 
 if not uploaded:
-    st.info("Bitte hochladen, um auszuwerten.")
+    st.info("Bitte lade eine Datei in der Sidebar hoch.")
     st.stop()
 
-# 2) Daten einlesen
-if uploaded.name.lower().endswith(("xls", "xlsx")):
+# — Daten einlesen — 
+if uploaded.name.lower().endswith(("xls","xlsx")):
     df = pd.read_excel(uploaded)
 else:
     df = pd.read_csv(uploaded)
 
-# Vorschau der originalen Eingabedaten
-st.subheader("📋 Eingelesene Rohdaten")
-st.dataframe(df)
-
-# 3) Parameter wählen
-nutzung   = st.selectbox("Nutzungsart", ["Acker", "Gruenland"])
-phyto     = st.number_input("Physiologische Gründigkeit (cm)", min_value=10, max_value=500, value=100)
-bodenform = st.text_input("Bodenform (z.B. Braunerde)", value="")
-
-# 4) Auswertung starten
-if st.button("Auswerten"):
+# — Auswertung starten — 
+if run:
+    # Horizonte aufbereiten
     horizonte = build_horizonte_list(df)
 
-    # Vorschau der verarbeiteten Horizonte
-    st.subheader("🔍 Verarbeitete Horizonte")
-    horizonte_df = pd.DataFrame(horizonte)
-    st.dataframe(horizonte_df)
+    # Tabs anlegen
+    tab1, tab2, tab3 = st.tabs(["Rohdaten", "Horizonte", "Ergebnisse"])
 
-    # Oberboden-Werte
-    ober        = min(horizonte, key=lambda h: h["z_top"])
-    bodentyp    = ober["Bodenart"].strip()
-    bg          = bodentyp_to_bg.get(bodentyp)
-    ph_wert     = ober["pH"]
-    humus_wert  = ober["humus"]
-    humus_kat   = humuskategorie(humus_wert)
+    # Tab 1: Rohdaten zeigen
+    with tab1:
+        st.subheader("📋 Eingelesene Rohdaten")
+        st.dataframe(df, use_container_width=True)
+
+    # Tab 2: Verarbeitete Horizonte
+    with tab2:
+        st.subheader("🔍 Verarbeitete Horizonte")
+        st.dataframe(pd.DataFrame(horizonte), use_container_width=True)
+
+    # Oberboden-Werte extrahieren
+    ober       = min(horizonte, key=lambda h: h["z_top"])
+    bodentyp   = ober["Bodenart"].strip()
+    bg         = bodentyp_to_bg.get(bodentyp)
+    ph_wert    = ober["pH"]
+    humus_wert = ober["humus"]
 
     # Kalkbedarf berechnen
     df_acker = pd.read_csv("kalkbedarf_acker.csv")
     df_gruen = pd.read_csv("kalkbedarf_gruen.csv")
     kalk, msg = berechne_kalkbedarf(
-        bg,
-        ph_wert,
-        humus_wert,
-        nutzung.lower(),
-        df_acker,
-        df_gruen
+        bg, ph_wert, humus_wert,
+        nutzungsart=nutzung.lower(),
+        df_acker=df_acker,
+        df_gruen=df_gruen
     )
-    if msg:
-        st.warning(msg)
-        kalk_value = ""
-    else:
-        kalk_value = kalk
+    kalk_value = kalk if msg is None else None
 
-    # weitere Auswertungen
+    # Humusvorrat und nFK
     _, total_hum = humusvorrat(horizonte, max_tiefe=100)
-    nfk = gesamt_nfk(horizonte, phyto)
+    nfk          = gesamt_nfk(horizonte, phyto)
 
-    # 5) Ergebnisse in Tabelle zusammenstellen
-    result_df = pd.DataFrame([{
-        "Bodentyp":                             bodentyp,
-        "Bodenform":                            bodenform,
-        "Physiologische Gründigkeit (cm)":      phyto,
-        "Humusvorrat bis 1 m (Mg/ha)":          total_hum * 10,
-        "pH Oberboden":                         ph_wert,
-        "Kalkbedarf (dt CaO/ha)":               kalk_value,
-        "nFK (mm)":                             nfk
-    }])
+    # Tab 3: Ergebnisse
+    with tab3:
+        st.subheader("✅ Zusammenfassung")
+        # Kennzahlen als Metrics
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Humusvorrat (Mg/ha)", f"{total_hum*10:.1f}")
+        c2.metric("pH Oberboden", f"{ph_wert:.2f}")
+        c3.metric("nFK (mm)", f"{nfk:.0f}")
+        c4.metric("Kalkbedarf (dt CaO/ha)", f"{kalk_value:.1f}" if kalk_value is not None else "–")
 
-    st.subheader("✅ Zusammenfassung")
-    st.dataframe(result_df)
+        st.markdown("---")
+        # Ergebnistabelle
+        result_df = pd.DataFrame([{
+            "Bodentyp":                           bodentyp,
+            "Bodenform":                          bodenform,
+            "Physiologische Gründigkeit (cm)":    phyto,
+            "Humusvorrat bis 1 m (Mg/ha)":        total_hum * 10,
+            "pH Oberboden":                       ph_wert,
+            "Kalkbedarf (dt CaO/ha)":             kalk_value or "",
+            "nFK (mm)":                           nfk
+        }])
+        st.dataframe(result_df, use_container_width=True)
 
-    # 6) Download als echte Excel-Datei
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        result_df.to_excel(writer, index=False)
-    buffer.seek(0)
-
-    st.download_button(
-        "Ergebnis als Excel herunterladen",
-        data=buffer,
-        file_name="ergebnis.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+        # Download-Button
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+            result_df.to_excel(writer, index=False)
+        buffer.seek(0)
+        st.download_button(
+            "Ergebnis als Excel herunterladen",
+            data=buffer,
+            file_name="ergebnis.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
