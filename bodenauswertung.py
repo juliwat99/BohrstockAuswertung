@@ -37,16 +37,16 @@ def humuskategorie(humus, nutzungsart="acker"):
     """
     Gibt die Humuskategorie zurück, abhängig von der Nutzungsart.
     Für Acker:     <4, 4.1-8.0, 8.1-15.0, 15.1-30.0, >30.0
-    Für Grünland:  <15, 15.1-30, >30
+    Für Grünland:  ≤15.0, 15.1-30.0, >30.0
     """
     if nutzungsart.lower() in ("gruenland", "grünland"):
-        if humus < 15.1:
-            return "<15"
-        if humus <= 30:
-            return "15.1-30"
-        return ">30"
+        if humus <= 15.0:
+            return "≤15.0"
+        if humus <= 30.0:
+            return "15.1-30.0"
+        return ">30.0"
     else:
-        # Acker-Einteilung wie bisher
+        # Acker-Einteilung
         if humus < 4.1:
             return "<4"
         if humus <= 8.0:
@@ -77,13 +77,11 @@ def berechne_kalkbedarf(bg, pH, humus, nutzungsart, df_acker, df_gruen):
     if pd.isna(pH):
         return None, "Kein pH-Wert im Oberboden angegeben."
 
-    # Tabelle wählen
-    df = df_acker if nutzungsart=="acker" else df_gruen
+    df = df_acker if nutzungsart == "acker" else df_gruen
 
-    # Humuskategorie bestimmen – jetzt mit Nutzungsart!
+    # Humuskategorie jetzt mit Nutzungsart
     kat = humuskategorie(humus, nutzungsart)
 
-    # Filterkriterien
     mask = (
         (df.bg == bg) &
         (df.humus_kat == kat) &
