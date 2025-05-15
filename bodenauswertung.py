@@ -189,6 +189,8 @@ def build_horizonte_list(df):
 
     # Liste bauen
     horizonte = []
+    # alle Bodenart-Werte säubern
+    df[col_bodenart] = df[col_bodenart].astype(str).str.strip()
     for _, row in df.iterrows():
         horizonte.append({
             "hz":       row[col_horizont],
