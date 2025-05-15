@@ -25,6 +25,10 @@ if uploaded.name.lower().endswith(("xls", "xlsx")):
 else:
     df = pd.read_csv(uploaded)
 
+# Vorschau der originalen Eingabedaten
+st.subheader("📋 Eingelesene Rohdaten")
+st.dataframe(df)
+
 # 3) Parameter wählen
 nutzung   = st.selectbox("Nutzungsart", ["Acker", "Gruenland"])
 phyto     = st.number_input("Physiologische Gründigkeit (cm)", min_value=10, max_value=500, value=100)
@@ -33,6 +37,11 @@ bodenform = st.text_input("Bodenform (z.B. Braunerde)", value="")
 # 4) Auswertung starten
 if st.button("Auswerten"):
     horizonte = build_horizonte_list(df)
+
+    # Vorschau der verarbeiteten Horizonte
+    st.subheader("🔍 Verarbeitete Horizonte")
+    horizonte_df = pd.DataFrame(horizonte)
+    st.dataframe(horizonte_df)
 
     # Oberboden-Werte
     ober        = min(horizonte, key=lambda h: h["z_top"])
@@ -74,7 +83,8 @@ if st.button("Auswerten"):
         "nFK (mm)":                             nfk
     }])
 
-    st.write("### Ergebnisse", result_df)
+    st.subheader("✅ Zusammenfassung")
+    st.dataframe(result_df)
 
     # 6) Download als echte Excel-Datei
     buffer = io.BytesIO()
