@@ -25,7 +25,7 @@ with st.sidebar:
     uploaded = st.file_uploader("Excel/CSV hochladen", type=["xlsx","csv"])
     nutzung  = st.selectbox("Nutzungsart", ["Acker", "Gruenland"])
     phyto    = st.number_input("Physio. Gründigkeit (cm)", min_value=10, max_value=500, value=100)
-    bodenform= st.text_input("Bodenform", "Braunerde")
+    bodenform= st.text_input("Bodenform")
     st.markdown("---")
     run = st.button("Auswerten")
 
