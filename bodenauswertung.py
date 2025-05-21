@@ -167,14 +167,17 @@ def gesamt_nfk(horizonte, phyto_tiefe=100):
     return total_mm
 
 def build_horizonte_list(df):
+    import pandas as pd, re
+
     cols = df.columns.tolist()
     def find_col(*keys):
         for c in cols:
             if all(k.lower() in c.lower() for k in keys):
                 return c
-        raise KeyError(f"Keine Spalte mit {keys!r} gefunden.")
+        raise KeyError(f"Keine Spalte mit {keys!r} gefunden. Verfügbare: {cols}")
+
     col_tiefe    = find_col("tiefe")
-    col_bd       = find_col("trocken", "dichte")
+    col_bd       = find_col("trocken","dichte")
     col_skelett  = find_col("skelett")
     col_humus    = find_col("humus")
     col_ph       = find_col("ph")
@@ -182,52 +185,47 @@ def build_horizonte_list(df):
     col_horizont = find_col("horizont")
 
     df2 = df.copy()
-
-    # Tiefen splitten
     depth = df2[col_tiefe].astype(str).str.strip()
-    splits = depth.str.split("-", expand=True)
+    # robust splitten, maximal 1x
+    splits = depth.str.split("-", n=1, expand=True)
+    # falls nur eine Spalte: zweite Spalte mit NaN füllen
+    if splits.shape[1] == 1:
+        splits[1] = pd.NA
     df2["z_top"] = pd.to_numeric(splits[0], errors="coerce")
     df2["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
 
-    # Numerisch
-    df2[col_bd] = pd.to_numeric(df2[col_bd], errors="coerce")
-    df2[col_ph] = pd.to_numeric(df2[col_ph], errors="coerce")
+    # numerisch umwandeln
+    df2[col_bd]      = pd.to_numeric(df2[col_bd], errors="coerce")
+    df2[col_skelett] = pd.to_numeric(df2[col_skelett], errors="coerce")
+    df2[col_ph]      = pd.to_numeric(df2[col_ph], errors="coerce")
 
-    # Parser für Humus und Skelett
-    def parse_range(val, default=0.0):
+    # humus parsen
+    def parse_range(val):
         s = str(val).strip()
-        # <X → X/2
-        m = re.match(r'<\s*(\d+(\.\d+)?)', s)
+        m = re.match(r"<\s*(\d+(\.\d+)?)", s)
         if m:
-            return float(m.group(1)) / 2
-        # Bereich "a-b" → (a+b)/2
-        s2 = s.replace('<','').replace('>','').strip()
-        if '-' in s2:
-            lo, hi = s2.split('-',1)
-            try:
-                return (float(lo)+float(hi)) / 2
-            except:
-                return default
-        # einfacher float
-        try:
-            return float(s2)
-        except:
-            return default
+            return float(m.group(1))/2
+        s2 = s.replace("<","").replace(">","").strip()
+        if "-" in s2:
+            lo,hi = s2.split("-",1)
+            try: return (float(lo)+float(hi))/2
+            except: pass
+        try: return float(s2)
+        except: return None
 
-    df2["humus_num"]   = df2[col_humus].apply(lambda v: parse_range(v, default=0.0))
-    df2["skelett_num"] = df2[col_skelett].apply(lambda v: parse_range(v, default=0.0))
-    
+    df2["humus_num"] = df2[col_humus].apply(parse_range)
+
     horizonte = []
-    for _, row in df2.iterrows():
+    for _, r in df2.iterrows():
         horizonte.append({
-            "hz":       row[col_horizont],
-            "z_top":    row["z_top"],
-            "z_bot":    row["z_bot"],
-            "bd":       row[col_bd]   or 0.0,
-            "humus":    row["humus_num"],
-            "pH":       row[col_ph]    or 0.0,
-            "Bodenart": row[col_bodenart],
-            "skelett":  row["skelett_num"]
+            "hz":       r[col_horizont],
+            "z_top":    r["z_top"],
+            "z_bot":    r["z_bot"],
+            "bd":       r[col_bd],
+            "humus":    r["humus_num"],
+            "pH":       r[col_ph],
+            "Bodenart": r[col_bodenart],
+            "skelett":  r[col_skelett] if pd.notna(r[col_skelett]) else 0
         })
     return horizonte
 def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float | None:
