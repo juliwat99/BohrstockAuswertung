@@ -43,9 +43,10 @@ else:
     df = pd.read_csv(uploaded)
 
 if run:
+    # 1) Horizonte verarbeiten
     horizonte = build_horizonte_list(df)
 
-    # Tabs anlegen
+    # 2) Tabs anlegen
     tab1, tab2, tab3 = st.tabs(["Rohdaten", "Horizonte", "Ergebnisse"])
 
     with tab1:
@@ -56,14 +57,14 @@ if run:
         st.subheader("🔍 Verarbeitete Horizonte")
         st.dataframe(pd.DataFrame(horizonte), use_container_width=True)
 
-    # Oberboden-Werte
+    # 3) Oberboden-Werte
     ober       = min(horizonte, key=lambda h: h["z_top"])
     bodentyp   = ober["Bodenart"].strip()
     bg         = bodentyp_to_bg.get(bodentyp)
     ph_wert    = ober["pH"]
     humus_wert = ober["humus"]
 
-    # Kalkbedarf
+    # 4) Kalkbedarf
     df_acker = pd.read_csv("kalkbedarf_acker.csv")
     df_gruen = pd.read_csv("kalkbedarf_gruen.csv")
     kalk, msg = berechne_kalkbedarf(
@@ -74,38 +75,41 @@ if run:
         df_acker=df_acker,
         df_gruen=df_gruen
     )
-    kalk_value = kalk if msg is None else None
+    kalk_value = kalk if msg is None else ""
 
-    # Kapillar-Aufstiegsrate
-    kap_rate = kapillaraufstiegsrate(horizonte, phyto)
+    # 5) Kapillar-Aufstiegsrate
+    kap_rate = kapillaraufstiegsrate(horizonte, phyto) or ""
 
-    # Humusvorrat (1 m) und nFK
+    # 6) Humusvorrat (1 m) und nFK
     _, total_hum = humusvorrat(horizonte, max_tiefe=100)
     nfk          = gesamt_nfk(horizonte, phyto)
+    nfk_value    = nfk if nfk is not None else ""
 
     with tab3:
         st.subheader("✅ Zusammenfassung")
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("Humusvorrat 1 m (Mg/ha)", f"{total_hum*10:.1f}")
         c2.metric("pH Oberboden",           f"{ph_wert:.2f}")
-        c3.metric("nFK (mm)",               f"{nfk:.0f}")
-        c4.metric("Kalkbedarf (dt CaO/ha)", f"{kalk_value:.1f}" if kalk_value is not None else "–")
-        c5.metric("Kap. Aufstieg (mm/d)",   f"{kap_rate:.2f}"     if kap_rate is not None else "–")
+        c3.metric("nFK (mm)",               f"{nfk_value}")
+        c4.metric("Kalkbedarf (dt CaO/ha)", f"{kalk_value}")
+        c5.metric("Kap. Aufstiegsrate (mm/d)", f"{kap_rate}")
 
         st.markdown("---")
+
         result_df = pd.DataFrame([{
             "Bodentyp":                        bodentyp,
             "Bodenform":                       bodenform,
             "Phys. Gründigkeit (cm)":          phyto,
             "Humusvorrat bis 1 m (Mg/ha)":     total_hum * 10,
             "pH Oberboden":                    ph_wert,
-            "Kalkbedarf (dt CaO/ha)":          kalk_value or "",
-            "nFK (mm)":                        nfk,
-            "Kap. Aufstiegsrate (mm/d)":       kap_rate or ""
+            "Kalkbedarf (dt CaO/ha)":          kalk_value,
+            "nFK (mm)":                        nfk_value,
+            "Kap. Aufstiegsrate (mm/d)":       kap_rate
         }])
+
         st.dataframe(result_df, use_container_width=True)
 
-        # Download
+        # Download-Button
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
             result_df.to_excel(writer, index=False)
