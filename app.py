@@ -76,7 +76,7 @@ if run:
         df_gruen=df_gruen
     )
     # Wenn kein Tabellenwert gefunden wurde, bleibt kalk_value leer
-    kalk_value = f"{kalk:.1f}" if kalk is not None else ""
+    kalk_value = f"{kalk:.1f}" if kalk is not None else "Kein Bedarf"
 
     # 5) Kapillar-Aufstiegsrate
     kap_rate = kapillaraufstiegsrate(horizonte, phyto) or ""
