@@ -87,7 +87,7 @@ if run:
     # nFK auf volle mm runden
     nfk_value = f"{nfk:.0f}" if nfk is not None else ""
 
-     with tab3:
+    with tab3:
         st.subheader("✅ Zusammenfassung")
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("Humusvorrat 1 m (Mg/ha)", f"{total_hum*10:.1f}")
