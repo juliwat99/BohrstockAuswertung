@@ -75,23 +75,25 @@ if run:
         df_acker=df_acker,
         df_gruen=df_gruen
     )
-    kalk_value = kalk if msg is None else ""
+    # Wenn kein Tabellenwert gefunden wurde, bleibt kalk_value leer
+    kalk_value = f"{kalk:.1f}" if kalk is not None else ""
 
     # 5) Kapillar-Aufstiegsrate
     kap_rate = kapillaraufstiegsrate(horizonte, phyto) or ""
 
     # 6) Humusvorrat (1 m) und nFK
     _, total_hum = humusvorrat(horizonte, max_tiefe=100)
-    nfk          = gesamt_nfk(horizonte, phyto)
-    nfk_value    = nfk if nfk is not None else ""
+    nfk = gesamt_nfk(horizonte, phyto)
+    # nFK auf volle mm runden
+    nfk_value = f"{nfk:.0f}" if nfk is not None else ""
 
-    with tab3:
+     with tab3:
         st.subheader("✅ Zusammenfassung")
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("Humusvorrat 1 m (Mg/ha)", f"{total_hum*10:.1f}")
         c2.metric("pH Oberboden",           f"{ph_wert:.2f}")
-        c3.metric("nFK (mm)",               f"{nfk_value}")
-        c4.metric("Kalkbedarf (dt CaO/ha)", f"{kalk_value}")
+        c3.metric("nFK (mm)",               nfk_value)
+        c4.metric("Kalkbedarf (dt CaO/ha)", kalk_value or "–")
         c5.metric("Kap. Aufstiegsrate (mm/d)", f"{kap_rate}")
 
         st.markdown("---")
@@ -106,7 +108,6 @@ if run:
             "nFK (mm)":                        nfk_value,
             "Kap. Aufstiegsrate (mm/d)":       kap_rate
         }])
-
         st.dataframe(result_df, use_container_width=True)
 
         # Download-Button
