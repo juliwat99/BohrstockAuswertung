@@ -230,32 +230,13 @@ def build_horizonte_list(df):
             "skelett":  row["skelett_num"]
         })
     return horizonte
-#(7) NFwa
-# ————————— Kapillaraufstiegs-Rate —————————
-
-# Tabelle aus deinem Beispiel in ein DataFrame umwandeln:
-_KAP_TABLE = pd.DataFrame([
-    ["X",           "",   "",    "",   "",   "",    "",    "",    "",    "",    "",    ""],
-    ["Sl2, Sl3, Sl4", ">5", ">5", "3", "1,5","1", "0,4",  "0,2",  "0,1",  "",     "",    ""],
-    ["Su",          ">5", "5",   "3", "2",  "1,2","0,6",  "0,2",  "0,1",  "",     "",    ""],
-    ["Ls2, Ls3, Ls4",">5", ">5", "2,3","1,4","1,1","0,5",  "0,3",  "0,1",  "",     "",    ""],
-    ["Lu",          ">5", ">5", ">5", "5",  "3",  "1,5",  "0,8",  "0,4",  "0,2",  "",    ""],
-    ["Ut2, Ut3, Ut4",">5",">5", ">5", ">5", ">5", "4,5",  "3,5",  "2,3",  "1,5", "1,0","0,6"],
-    ["Lts, Lt2, Lt3","5", "2,8", "1,4","0,9","0,5","0,3",  "0,1",  "",     "",    "",    ""],
-    ["Tu3, Tu4",    ">5","5",   "3,6","2,5","1,7","0,6",  "0,4",  "0,1",  "0,1", "",    ""],
-    ["Tu2, Tl, Tt", "5", "3",   "1,3","0,5","0,3","0,2",  "0,1",  "",     "",    "",    ""],
-], columns=["Bodenart","2","3","4","5","6","8","10","12","14","17","20"])
-
-# Spaltennamen als Zahlen (dm)
-_KAP_DMS = [2,3,4,5,6,8,10,12,14,17,20]
-
-def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float|None:
+def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float | None:
     """
-    Berechnet die mittlere Kapillar- Aufstiegsrate (mm/d).
+    Berechnet die mittlere Kapillar-Aufstiegsrate (mm/d).
     - sucht nach dem ersten Horizont, dessen 'hz' mit 'Gr' beginnt
-    - ermittelt Start-Zeit (z_top) → Abstand in cm = z_top - physiogr
-    - wandelt Abstand in dm um und sucht den nächstgrößeren Schlüssel in _KAP_DMS
-    - holt aus _KAP_TABLE den Wert für die Bodenart
+    - ermittelt Abstand in cm = z_top - physiogr
+    - wandelt Abstand in dm um und wählt den nächsten Schlüssel in _KAP_DMS
+    - liest daraus den passenden Wert in _KAP_TABLE
     """
     # 1) Gr-Horizont finden
     start = next((h["z_top"] for h in horizonte if str(h["hz"]).startswith("Gr")), None)
@@ -266,32 +247,32 @@ def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float|None:
         return 0.0
     dist_dm = dist_cm / 10
 
-    # 2) Welche dm-Spalte passt? nächstkleiner oder -größer dm
+    # 2) Passende dm-Spalte wählen
     dm = min(_KAP_DMS, key=lambda x: abs(x - dist_dm))
 
-    # 3) Bodenart-Zeile auswählen (Substring-Match)
-    bod = str(next(h["Bodenart"] for h in horizonte if str(h["hz"]).startswith("Gr")))
-    row = _KAP_TABLE[_KAP_TABLE["Bodenart"].str.contains(bod.split()[0], regex=False, na=False)]
+    # 3) Zeile für die Gr-Bodenart suchen
+    bod = next((h["Bodenart"] for h in horizonte if str(h["hz"]).startswith("Gr")), "")
+    row = _KAP_TABLE[_KAP_TABLE["Bodenart"].str.contains(bod.split()[0], na=False)]
     if row.empty:
         return None
 
-    val = row[str(dm)].iloc[0]
-    if not val or not val.strip():
+    # 4) Spalte prüfen und Wert auslesen, Fehler abfangen
+    col = str(dm)
+    if col not in _KAP_TABLE.columns:
+        return None
+    val = row[col].iloc[0]
+    if not isinstance(val, str) or not val.strip():
         return None
 
-    s = val.strip().replace(",", ".")
+    # 5) '>'-Werte (z.B. '>5') behandeln: hier als None ignorieren
+    if val.strip().startswith(">"):
+        return None
 
-    # Wenn der String mit '>' oder '<' beginnt, gib ihn unverändert zurück
-    if s[0] in (">", "<"):
-        return s
-
-    # Sonst versuche ihn als Zahl zu parsen
+    # 6) Komma → Punkt und float
     try:
-        return float(s)
+        return float(val.replace(",", "."))
     except ValueError:
         return None
-
-
 # ——————————————————————————————————————————
 # Hauptprogramm
 # ——————————————————————————————————————————
