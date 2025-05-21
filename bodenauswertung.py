@@ -175,7 +175,7 @@ def build_horizonte_list(df):
                 return c
         raise KeyError(f"Keine Spalte mit {keys!r} gefunden. Verfügbare: {cols}")
 
-    # 1) Spalten identifizieren
+    # Spalten finden
     col_tiefe    = find_col("tiefe")
     col_bd       = find_col("trocken", "dichte")
     col_skelett  = find_col("skelett")
@@ -186,45 +186,42 @@ def build_horizonte_list(df):
 
     df2 = df.copy()
 
-    # 2) Tiefe: En-/Em-dash → ASCII-Bindestrich, komischen Text entfernen
-    depth = (df2[col_tiefe].astype(str)
-             .str.replace("–","-",regex=False)
-             .str.replace("—","-",regex=False)
-             # nur Ziffern, Bindestrich und Komma/Punkt behalten
-             .str.replace(r"[^\d\-\.,]", "", regex=True)
+    # 1) Tiefen‐Splitting (Immer genau 2 Spalten)
+    depth = (
+        df2[col_tiefe].astype(str)
+          .str.replace("–", "-", regex=False)
+          .str.replace("—", "-", regex=False)
+          .str.replace(r"[^\d\-\.,]", "", regex=True)
     )
     splits = depth.str.split("-", n=1, expand=True)
-    splits[1] = splits[1].where(splits.shape[1]>1, pd.NA)
+    # Falls es nur eine Zahl ohne Bindestrich war, füllt pandas splits[1] mit NaN
     df2["z_top"] = pd.to_numeric(splits[0], errors="coerce")
     df2["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
 
-    # 3) Hilfs-Parser für alle kommagetrennten numerischen Felder
+    # 2) Generalisiertes Parsing für alle numerischen Felder
     def parse_num(val):
-        s = str(val).strip()
-        # Komma→Punkt
-        s = s.replace(",", ".")
-        # <x  → x/2
+        s = str(val).strip().replace(",", ".")
+        # "<x" -> x/2
         m = re.match(r"<\s*(\d+(\.\d+)?)", s)
         if m:
             return float(m.group(1)) / 2
-        # >x → x
+        # ">x" -> x
         m = re.match(r">\s*(\d+(\.\d+)?)", s)
         if m:
             return float(m.group(1))
-        # sonst normalen float
+        # sonst float oder None
         try:
             return float(s)
         except:
             return None
 
-    # 4) Auf alle numerischen Spalten anwenden
+    # 3) Auf die Spalten anwenden
     df2["bd"]      = df2[col_bd].apply(parse_num)
-    df2["skelett"] = df2[col_skelett].apply(parse_num)
+    df2["skelett"] = df2[col_skelett].apply(parse_num).fillna(0)
     df2["pH"]      = df2[col_ph].apply(parse_num)
-    # Humus als Prozent: parse_num, kein extra Range-Handling mehr nötig
     df2["humus"]   = df2[col_humus].apply(parse_num)
 
-    # 5) Liste bauen
+    # 4) Liste der Horizonte erstellen
     horizonte = []
     for _, r in df2.iterrows():
         horizonte.append({
@@ -235,7 +232,7 @@ def build_horizonte_list(df):
             "humus":    r["humus"],
             "pH":       r["pH"],
             "Bodenart": r[col_bodenart],
-            "skelett":  r["skelett"] or 0
+            "skelett":  r["skelett"]
         })
     return horizonte
 def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float | None:
