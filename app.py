@@ -75,7 +75,11 @@ if run:
         df_acker=df_acker,
         df_gruen=df_gruen
     )
-    kalk_value = f"{kalk:.1f}" if kalk is not None else "Kein Bedarf"
+    # Falls None oder nan → "Kein Bedarf"
+    if kalk is None or pd.isna(kalk):
+        kalk_value = "Kein Bedarf"
+    else:
+        kalk_value = f"{kalk:.1f}"
 
     # 5) Kapillar-Aufstiegsrate
     kap_rate = kapillaraufstiegsrate(horizonte, phyto) or ""
