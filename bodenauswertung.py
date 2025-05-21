@@ -235,45 +235,46 @@ def build_horizonte_list(df):
             "skelett":  r["skelett"]
         })
     return horizonte
+    
 def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float | None:
     """
     Berechnet die mittlere Kapillar-Aufstiegsrate (mm/d).
-    - sucht nach dem ersten Horizont, dessen 'hz' mit 'Gr' beginnt
-    - ermittelt Abstand in cm = z_top - physiogr
-    - wandelt Abstand in dm um und wählt den nächsten Schlüssel in _KAP_DMS
-    - liest daraus den passenden Wert in _KAP_TABLE
+    - sucht nach dem ersten Horizont, dessen 'hz' (case-insensitive) den Substring 'gr' enthält
     """
-    # 1) Gr-Horizont finden
-    start = next((h["z_top"] for h in horizonte if str(h["hz"]).startswith("Gr")), None)
-    if start is None:
+    # 1) Gr-Horizont finden (case-insensitive)
+    gr_horizont = next(
+        (h for h in horizonte if isinstance(h.get("hz"), str) and "gr" in h["hz"].lower()),
+        None
+    )
+    if gr_horizont is None:
         return None
-    dist_cm = start - physiogr
+
+    start_cm = gr_horizont.get("z_top")
+    if start_cm is None:
+        return None
+
+    # 2) Abstand zur physiologischen Gründigkeit
+    dist_cm = start_cm - physiogr
     if dist_cm <= 0:
         return 0.0
+
     dist_dm = dist_cm / 10
 
-    # 2) Passende dm-Spalte wählen
+    # 3) nächstliegende dm-Spalte wählen
     dm = min(_KAP_DMS, key=lambda x: abs(x - dist_dm))
 
-    # 3) Zeile für die Gr-Bodenart suchen
-    bod = next((h["Bodenart"] for h in horizonte if str(h["hz"]).startswith("Gr")), "")
-    row = _KAP_TABLE[_KAP_TABLE["Bodenart"].str.contains(bod.split()[0], na=False)]
+    # 4) Bodenart aus dem Gr-Horizont
+    bod = str(gr_horizont.get("Bodenart", ""))
+    # substring-Match in der Tabelle
+    row = _KAP_TABLE[_KAP_TABLE["Bodenart"].str.lower().str.contains(bod.split()[0].lower(), na=False)]
     if row.empty:
         return None
 
-    # 4) Spalte prüfen und Wert auslesen, Fehler abfangen
-    col = str(dm)
-    if col not in _KAP_TABLE.columns:
-        return None
-    val = row[col].iloc[0]
+    val = row[str(dm)].iloc[0]
     if not isinstance(val, str) or not val.strip():
         return None
 
-    # 5) '>'-Werte (z.B. '>5') behandeln: hier als None ignorieren
-    if val.strip().startswith(">"):
-        return None
-
-    # 6) Komma → Punkt und float
+    # 5) Komma → Punkt, in float
     try:
         return float(val.replace(",", "."))
     except ValueError:
