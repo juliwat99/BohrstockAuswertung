@@ -23,12 +23,16 @@ st.set_page_config(
 # — Sidebar für Inputs —
 with st.sidebar:
     st.header("Einstellungen")
-    uploaded  = st.file_uploader("Excel/CSV hochladen", type=["xlsx","csv"])
-    nutzung   = st.selectbox("Nutzungsart", ["Acker", "Gruenland"])
-    phyto     = st.number_input("Physio. Gründigkeit (cm)", min_value=10, max_value=500, value=100)
-    bodenform = st.text_input("Bodenform")
+    bohrnr    = st.text_input("Bohrstock-Nr.", value="")
+    rechts     = st.text_input("Rechtswert", value="")
+    hochwert   = st.text_input("Hochwert", value="")
     st.markdown("---")
-    run = st.button("Auswerten")
+    uploaded   = st.file_uploader("Excel/CSV hochladen", type=["xlsx","csv"])
+    nutzung    = st.selectbox("Nutzungsart", ["Acker", "Gruenland"])
+    phyto      = st.number_input("Physio. Gründigkeit (cm)", min_value=10, max_value=500, value=100)
+    bodenform  = st.text_input("Bodenform", value="")
+    st.markdown("---")
+    run        = st.button("Auswerten")
 
 st.title("🌿 Bohrstock-Auswertung")
 
@@ -58,16 +62,16 @@ if run:
         st.dataframe(pd.DataFrame(horizonte), use_container_width=True)
 
     # 3) Oberboden-Werte
-    ober       = min(horizonte, key=lambda h: h["z_top"])
-    bodentyp   = ober["Bodenart"].strip()
-    bg         = bodentyp_to_bg.get(bodentyp)
-    ph_wert    = ober["pH"]
-    humus_wert = ober["humus"]
+    ober        = min(horizonte, key=lambda h: h["z_top"])
+    bodentyp    = ober["Bodenart"].strip()
+    bg          = bodentyp_to_bg.get(bodentyp)
+    ph_wert     = ober["pH"]
+    humus_wert  = ober["humus"]
 
     # 4) Kalkbedarf
-    df_acker = pd.read_csv("kalkbedarf_acker.csv")
-    df_gruen = pd.read_csv("kalkbedarf_gruen.csv")
-    kalk, msg = berechne_kalkbedarf(
+    df_acker    = pd.read_csv("kalkbedarf_acker.csv")
+    df_gruen    = pd.read_csv("kalkbedarf_gruen.csv")
+    kalk, msg   = berechne_kalkbedarf(
         bg,
         ph_wert,
         humus_wert,
@@ -75,20 +79,17 @@ if run:
         df_acker=df_acker,
         df_gruen=df_gruen
     )
-    # Falls None oder nan → "Kein Bedarf"
-    if kalk is None or pd.isna(kalk):
-        kalk_value = "Kein Bedarf"
-    else:
-        kalk_value = f"{kalk:.1f}"
+    kalk_value  = f"{kalk:.1f}" if kalk is not None else "Kein Bedarf"
 
     # 5) Kapillar-Aufstiegsrate
-    kap_rate = kapillaraufstiegsrate(horizonte, phyto) or ""
+    kap_rate    = kapillaraufstiegsrate(horizonte, phyto) or ""
 
     # 6) Humusvorrat (1 m) und nFK
     _, total_hum = humusvorrat(horizonte, max_tiefe=100)
-    nfk = gesamt_nfk(horizonte, phyto)
-    nfk_value = f"{nfk:.0f}" if nfk is not None else ""
+    nfk         = gesamt_nfk(horizonte, phyto)
+    nfk_value   = f"{nfk:.0f}" if nfk is not None else ""
 
+    # 7) Ergebnisse
     with tab3:
         st.subheader("✅ Zusammenfassung")
         c1, c2, c3, c4, c5 = st.columns(5)
@@ -100,15 +101,19 @@ if run:
 
         st.markdown("---")
 
+        # Ergebnistabelle inkl. Bohr-Nr., Rechts- und Hochwert
         result_df = pd.DataFrame([{
-            "Bodentyp":                       bodentyp,
-            "Bodenform":                      bodenform,
-            "Phys. Gründigkeit (cm)":         phyto,
-            "Humusvorrat bis 1 m (Mg/ha)":    total_hum * 10,
-            "pH Oberboden":                   ph_wert,
-            "Kalkbedarf (dt CaO/ha)":         kalk_value,
-            "nFK (mm)":                       nfk_value,
-            "Kap. Aufstiegsrate (mm/d)":      kap_rate
+            "Bohrstock-Nr.":                   bohrnr,
+            "Rechtswert":                      rechts,
+            "Hochwert":                        hochwert,
+            "Bodentyp":                        bodentyp,
+            "Bodenform":                       bodenform,
+            "Phys. Gründigkeit (cm)":          phyto,
+            "Humusvorrat bis 1 m (Mg/ha)":     total_hum * 10,
+            "pH Oberboden":                    ph_wert,
+            "Kalkbedarf (dt CaO/ha)":          kalk_value,
+            "nFK (mm)":                        nfk_value,
+            "Kap. Aufstiegsrate (mm/d)":       kap_rate
         }])
         st.dataframe(result_df, use_container_width=True)
 
