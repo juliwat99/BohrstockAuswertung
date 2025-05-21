@@ -67,15 +67,15 @@ if run:
     # 4) Kalkbedarf
     df_acker = pd.read_csv("kalkbedarf_acker.csv")
     df_gruen = pd.read_csv("kalkbedarf_gruen.csv")
-     # 4) Kalkbedarf
     kalk, msg = berechne_kalkbedarf(
-        bg, ph_wert, humus_wert,
+        bg,
+        ph_wert,
+        humus_wert,
         nutzungsart=nutzung.lower(),
         df_acker=df_acker,
         df_gruen=df_gruen
     )
     kalk_value = f"{kalk:.1f}" if kalk is not None else "Kein Bedarf"
-
 
     # 5) Kapillar-Aufstiegsrate
     kap_rate = kapillaraufstiegsrate(horizonte, phyto) or ""
@@ -83,10 +83,9 @@ if run:
     # 6) Humusvorrat (1 m) und nFK
     _, total_hum = humusvorrat(horizonte, max_tiefe=100)
     nfk = gesamt_nfk(horizonte, phyto)
-    # nFK auf volle mm runden
     nfk_value = f"{nfk:.0f}" if nfk is not None else ""
 
-   with tab3:
+    with tab3:
         st.subheader("✅ Zusammenfassung")
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("Humusvorrat 1 m (Mg/ha)", f"{total_hum*10:.1f}")
@@ -98,14 +97,14 @@ if run:
         st.markdown("---")
 
         result_df = pd.DataFrame([{
-            "Bodentyp":                        bodentyp,
-            "Bodenform":                       bodenform,
-            "Phys. Gründigkeit (cm)":          phyto,
-            "Humusvorrat bis 1 m (Mg/ha)":     total_hum * 10,
-            "pH Oberboden":                    ph_wert,
-            "Kalkbedarf (dt CaO/ha)":          kalk_value,
-            "nFK (mm)":                        nfk_value,
-            "Kap. Aufstiegsrate (mm/d)":       kap_rate
+            "Bodentyp":                       bodentyp,
+            "Bodenform":                      bodenform,
+            "Phys. Gründigkeit (cm)":         phyto,
+            "Humusvorrat bis 1 m (Mg/ha)":    total_hum * 10,
+            "pH Oberboden":                   ph_wert,
+            "Kalkbedarf (dt CaO/ha)":         kalk_value,
+            "nFK (mm)":                       nfk_value,
+            "Kap. Aufstiegsrate (mm/d)":      kap_rate
         }])
         st.dataframe(result_df, use_container_width=True)
 
