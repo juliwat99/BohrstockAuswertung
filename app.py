@@ -78,6 +78,9 @@ if run:
     )
     kalk_value = kalk if msg is None else None
 
+    #Aufstiegsrate
+    kap_rate = kapillaraufstiegsrate(horizonte, physiogr)
+    
     # Humusvorrat und nFK
     _, total_hum = humusvorrat(horizonte, max_tiefe=100)
     nfk          = gesamt_nfk(horizonte, phyto)
