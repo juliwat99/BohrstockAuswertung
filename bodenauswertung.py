@@ -132,9 +132,9 @@ def nfk_horizont(bodenart, skelett, humus, zone):
     return base * (1 - skelett / 100)
 
 def zone_von_bd(bd):
-    if bd <= 2:
+    if bd < 1.4:
         return "pt1+2"
-    elif bd <= 3:
+    elif bd < 1.6:
         return "pt3"
     else:
         return "pt4+5"
