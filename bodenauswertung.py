@@ -170,12 +170,10 @@ def build_horizonte_list(df):
     cols = df.columns.tolist()
     def find_col(*keys):
         for c in cols:
-            low = c.lower()
-            if all(k.lower() in low for k in keys):
+            if all(k.lower() in c.lower() for k in keys):
                 return c
-        raise KeyError(f"Keine Spalte mit {keys!r} gefunden. Verfügbare: {cols}")
+        raise KeyError(f"Keine Spalte mit {keys!r} gefunden.")
 
-    # Spalten finden
     col_tiefe    = find_col("tiefe")
     col_bd       = find_col("trocken", "dichte")
     col_skelett  = find_col("skelett")
@@ -184,58 +182,65 @@ def build_horizonte_list(df):
     col_bodenart = find_col("bodenart")
     col_horizont = find_col("horizont")
 
-    df2 = df.copy()
+    df = df.copy()
 
-    # 1) Tiefen‐Splitting (Immer genau 2 Spalten)
-    depth = (
-        df2[col_tiefe].astype(str)
-          .str.replace("–", "-", regex=False)
-          .str.replace("—", "-", regex=False)
-          .str.replace(r"[^\d\-\.,]", "", regex=True)
-    )
-    splits = depth.str.split("-", n=1, expand=True)
-    # Falls es nur eine Zahl ohne Bindestrich war, füllt pandas splits[1] mit NaN
-    df2["z_top"] = pd.to_numeric(splits[0], errors="coerce")
-    df2["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
+    # Tiefen splitten (Normalisierung aller Dash-Varianten)
+    depth = df[col_tiefe].astype(str).str.strip()
+    depth = depth.str.replace("–", "-").replace("—", "-")
+    splits = depth.str.split("-", expand=True)
+    df["z_top"] = pd.to_numeric(splits[0], errors="coerce")
+    df["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
 
-    # 2) Generalisiertes Parsing für alle numerischen Felder
-    def parse_num(val):
-        s = str(val).strip().replace(",", ".")
-        # "<x" -> x/2
-        m = re.match(r"<\s*(\d+(\.\d+)?)", s)
+    # Hilfsfunktion für Prozent/Ranges
+    def parse_number_or_range(val):
+        s = str(val).strip()
+        # normalize dashes + comma→dot + strip percent
+        s = s.replace("–", "-").replace("—", "-").replace(",", ".").replace("%", "")
+        # "<X" → X/2
+        m = re.match(r"<\s*(\d+(\.\d+)?)$", s)
         if m:
             return float(m.group(1)) / 2
-        # ">x" -> x
-        m = re.match(r">\s*(\d+(\.\d+)?)", s)
-        if m:
-            return float(m.group(1))
-        # sonst float oder None
+        # "X-Y" → Mittelwert
+        if "-" in s:
+            parts = s.split("-", 1)
+            try:
+                lo = float(parts[0])
+                hi = float(parts[1])
+                return (lo + hi) / 2
+            except:
+                pass
+        # einzelner Wert
         try:
             return float(s)
         except:
             return None
 
-    # 3) Auf die Spalten anwenden
-    df2["bd"]      = df2[col_bd].apply(parse_num)
-    df2["skelett"] = df2[col_skelett].apply(parse_num).fillna(0)
-    df2["pH"]      = df2[col_ph].apply(parse_num)
-    df2["humus"]   = df2[col_humus].apply(parse_num)
+    # bd numerisch (nur Zahl oder None)
+    df[col_bd] = df[col_bd].apply(lambda v: parse_number_or_range(v))
 
-    # 4) Liste der Horizonte erstellen
+    # skelett (%) → ebenfalls mit parse_number_or_range
+    df[col_skelett] = df[col_skelett].apply(lambda v: parse_number_or_range(v) or 0.0)
+
+    # pH numerisch
+    df[col_ph] = pd.to_numeric(df[col_ph], errors="coerce")
+
+    # humus
+    df["humus_num"] = df[col_humus].apply(lambda v: parse_number_or_range(v))
+
+    # Liste bauen
     horizonte = []
-    for _, r in df2.iterrows():
+    for _, row in df.iterrows():
         horizonte.append({
-            "hz":       r[col_horizont],
-            "z_top":    r["z_top"],
-            "z_bot":    r["z_bot"],
-            "bd":       r["bd"],
-            "humus":    r["humus"],
-            "pH":       r["pH"],
-            "Bodenart": r[col_bodenart],
-            "skelett":  r["skelett"]
+            "hz":       row[col_horizont],
+            "z_top":    row["z_top"],
+            "z_bot":    row["z_bot"],
+            "bd":       row[col_bd],
+            "humus":    row["humus_num"],
+            "pH":       row[col_ph],
+            "Bodenart": row[col_bodenart],
+            "skelett":  row[col_skelett]
         })
     return horizonte
-
 
 
 
