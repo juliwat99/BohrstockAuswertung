@@ -223,6 +223,58 @@ def build_horizonte_list(df):
             "skelett":  row[col_skelett] or 0
         })
     return horizonte
+#(7) NFwa
+# ————————— Kapillaraufstiegs-Rate —————————
+
+# Tabelle aus deinem Beispiel in ein DataFrame umwandeln:
+_KAP_TABLE = pd.DataFrame([
+    ["X",           "",   "",    "",   "",   "",    "",    "",    "",    "",    "",    ""],
+    ["Sl2, Sl3, Sl4", ">5", ">5", "3", "1,5","1", "0,4",  "0,2",  "0,1",  "",     "",    ""],
+    ["Su",          ">5", "5",   "3", "2",  "1,2","0,6",  "0,2",  "0,1",  "",     "",    ""],
+    ["Ls2, Ls3, Ls4",">5", ">5", "2,3","1,4","1,1","0,5",  "0,3",  "0,1",  "",     "",    ""],
+    ["Lu",          ">5", ">5", ">5", "5",  "3",  "1,5",  "0,8",  "0,4",  "0,2",  "",    ""],
+    ["Ut2, Ut3, Ut4",">5",">5", ">5", ">5", ">5", "4,5",  "3,5",  "2,3",  "1,5", "1,0","0,6"],
+    ["Lts, Lt2, Lt3","5", "2,8", "1,4","0,9","0,5","0,3",  "0,1",  "",     "",    "",    ""],
+    ["Tu3, Tu4",    ">5","5",   "3,6","2,5","1,7","0,6",  "0,4",  "0,1",  "0,1", "",    ""],
+    ["Tu2, Tl, Tt", "5", "3",   "1,3","0,5","0,3","0,2",  "0,1",  "",     "",    "",    ""],
+], columns=["Bodenart","2","3","4","5","6","8","10","12","14","17","20"])
+
+# Spaltennamen als Zahlen (dm)
+_KAP_DMS = [2,3,4,5,6,8,10,12,14,17,20]
+
+def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float|None:
+    """
+    Berechnet die mittlere Kapillar- Aufstiegsrate (mm/d).
+    - sucht nach dem ersten Horizont, dessen 'hz' mit 'Gr' beginnt
+    - ermittelt Start-Zeit (z_top) → Abstand in cm = z_top - physiogr
+    - wandelt Abstand in dm um und sucht den nächstgrößeren Schlüssel in _KAP_DMS
+    - holt aus _KAP_TABLE den Wert für die Bodenart
+    """
+    # 1) Gr-Horizont finden
+    start = next((h["z_top"] for h in horizonte if str(h["hz"]).startswith("Gr")), None)
+    if start is None:
+        return None
+    dist_cm = start - physiogr
+    if dist_cm <= 0:
+        return 0.0
+    dist_dm = dist_cm / 10
+
+    # 2) Welche dm-Spalte passt? nächstkleiner oder -größer dm
+    dm = min(_KAP_DMS, key=lambda x: abs(x - dist_dm))
+
+    # 3) Bodenart-Zeile auswählen (Substring-Match)
+    bod = str(next(h["Bodenart"] for h in horizonte if str(h["hz"]).startswith("Gr")))
+    row = _KAP_TABLE[_KAP_TABLE["Bodenart"].str.contains(bod.split()[0], regex=False, na=False)]
+    if row.empty:
+        return None
+
+    val = row[str(dm)].iloc[0]
+    if not val or val.strip() == "":
+        return None
+
+    # 4) Komma → Punkt und in float
+    return float(val.replace(",", "."))
+
 
 # ——————————————————————————————————————————
 # Hauptprogramm
