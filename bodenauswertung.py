@@ -166,6 +166,9 @@ def gesamt_nfk(horizonte, phyto_tiefe=100):
 
     return total_mm
 
+import pandas as pd
+import re
+
 def build_horizonte_list(df):
     cols = df.columns.tolist()
     def find_col(*keys):
@@ -184,17 +187,17 @@ def build_horizonte_list(df):
 
     df = df.copy()
 
-    # Tiefen splitten (Normalisierung aller Dash-Varianten)
+    # — Tiefen splitten (Normalisierung aller Dash‐Varianten) —
     depth = df[col_tiefe].astype(str).str.strip()
-    depth = depth.str.replace("–", "-").replace("—", "-")
+    depth = depth.str.replace("–", "-").str.replace("—", "-")
     splits = depth.str.split("-", expand=True)
     df["z_top"] = pd.to_numeric(splits[0], errors="coerce")
     df["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
 
-    # Hilfsfunktion für Prozent/Ranges
+    # — Parser für Zahlen, Ranges und Prozentangaben —
     def parse_number_or_range(val):
         s = str(val).strip()
-        # normalize dashes + comma→dot + strip percent
+        # normalize dashes, comma→dot, strip percent
         s = s.replace("–", "-").replace("—", "-").replace(",", ".").replace("%", "")
         # "<X" → X/2
         m = re.match(r"<\s*(\d+(\.\d+)?)$", s)
@@ -202,11 +205,9 @@ def build_horizonte_list(df):
             return float(m.group(1)) / 2
         # "X-Y" → Mittelwert
         if "-" in s:
-            parts = s.split("-", 1)
+            lo, hi = s.split("-", 1)
             try:
-                lo = float(parts[0])
-                hi = float(parts[1])
-                return (lo + hi) / 2
+                return (float(lo) + float(hi)) / 2
             except:
                 pass
         # einzelner Wert
@@ -215,19 +216,19 @@ def build_horizonte_list(df):
         except:
             return None
 
-    # bd numerisch (nur Zahl oder None)
-    df[col_bd] = df[col_bd].apply(lambda v: parse_number_or_range(v))
+    # — Dichte (bd) —
+    df[col_bd] = df[col_bd].apply(parse_number_or_range)
 
-    # skelett (%) → ebenfalls mit parse_number_or_range
+    # — Skelett (%) —> Null ersetzt, falls leer oder unparsebar
     df[col_skelett] = df[col_skelett].apply(lambda v: parse_number_or_range(v) or 0.0)
 
-    # pH numerisch
-    df[col_ph] = pd.to_numeric(df[col_ph], errors="coerce")
+    # — pH — mit demselben Parser für Ranges, aber hier einfacher:
+    df[col_ph] = df[col_ph].apply(lambda v: parse_number_or_range(v))
 
-    # humus
-    df["humus_num"] = df[col_humus].apply(lambda v: parse_number_or_range(v))
+    # — Humus —
+    df["humus_num"] = df[col_humus].apply(parse_number_or_range)
 
-    # Liste bauen
+    # — Liste bauen —
     horizonte = []
     for _, row in df.iterrows():
         horizonte.append({
@@ -241,6 +242,7 @@ def build_horizonte_list(df):
             "skelett":  row[col_skelett]
         })
     return horizonte
+
 
 
 
