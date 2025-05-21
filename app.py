@@ -24,16 +24,22 @@ st.set_page_config(
 with st.sidebar:
     st.header("Einstellungen")
     bohrnr    = st.text_input("Bohrstock-Nr.")
-    rechts     = st.text_input("Rechtswert")
-    hoch       = st.text_input("Hochwert")
-    uploaded   = st.file_uploader("Excel/CSV hochladen", type=["xlsx","csv"])
-    nutzung    = st.selectbox("Nutzungsart", ["Acker","Gruenland"])
-    phyto      = st.number_input("Physio. Gründigkeit (cm)", min_value=10, max_value=500, value=100)
-    bodenform  = st.text_input("Bodenform")
+    rechts    = st.text_input("Rechtswert")
+    hoch      = st.text_input("Hochwert")
+    uploaded  = st.file_uploader("Excel/CSV hochladen", type=["xlsx","csv"])
+    nutzung   = st.selectbox("Nutzungsart", ["Acker","Gruenland"])
+    phyto     = st.number_input("Physio. Gründigkeit (cm)", 10, 500, 100)
+    bodenform = st.text_input("Bodenform")
     st.markdown("---")
-    run        = st.button("Auswerten")
+    run       = st.button("Auswerten")
 
 st.title("🌿 Bohrstock-Auswertung")
+
+if run:
+    st.write("Du hast eingegeben:")
+    st.write(f"- Bohrstock Nr.: {bohrnr}")
+    st.write(f"- Rechtswert:     {rechts}")
+    st.write(f"- Hochwert:       {hoch}")
 
 # — 1) Warte auf Datei —
 if not uploaded:
