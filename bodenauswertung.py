@@ -276,11 +276,20 @@ def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float|None:
         return None
 
     val = row[str(dm)].iloc[0]
-    if not val or val.strip() == "":
+    if not val or not val.strip():
         return None
 
-    # 4) Komma → Punkt und in float
-    return float(val.replace(",", "."))
+    s = val.strip().replace(",", ".")
+
+    # Wenn der String mit '>' oder '<' beginnt, gib ihn unverändert zurück
+    if s[0] in (">", "<"):
+        return s
+
+    # Sonst versuche ihn als Zahl zu parsen
+    try:
+        return float(s)
+    except ValueError:
+        return None
 
 
 # ——————————————————————————————————————————
