@@ -177,7 +177,7 @@ def build_horizonte_list(df):
                 return c
         raise KeyError(f"Keine Spalte mit {keys!r} gefunden. Verfügbare: {cols}")
 
-    # Spalten suchen
+    # Spalten ermitteln
     col_tiefe    = find_col("tiefe")
     col_bd       = find_col("trocken", "dichte")
     col_skelett  = find_col("skelett")
@@ -188,22 +188,22 @@ def build_horizonte_list(df):
 
     df2 = df.copy()
 
-    # 1) Normalisiere alle Dash‐Varianten auf ASCII‐Bindestrich
-    depth_raw = df2[col_tiefe].astype(str)
-    depth_norm = (
-        depth_raw
-        .str.replace("–", "-", regex=False)  # en‐dash
-        .str.replace("—", "-", regex=False)  # em‐dash
-        .str.replace(r"[^\d\-,]", "", regex=True)  # nur Ziffern, Komma, Minus übriglassen
+    # 1) Tiefe normalisieren (En-/Em-dash → ASCII-Bindestrich)
+    depth = df2[col_tiefe].astype(str)
+    depth = (depth
+        .str.replace("–","-",regex=False)
+        .str.replace("—","-",regex=False)
+        .str.replace(r"[^\d\-,]","",regex=True)
     )
-
-    # 2) Split in z_top / z_bot (einmaliges n=1)
-    splits = depth_norm.str.split("-", n=1, expand=True)
-    if splits.shape[1] == 1:
+    splits = depth.str.split("-", n=1, expand=True)
+    if splits.shape[1]==1:
         splits[1] = pd.NA
-
     df2["z_top"] = pd.to_numeric(splits[0], errors="coerce")
     df2["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
+
+    # 2) Komma→Punkt für numerische Spalten
+    for col in (col_bd, col_skelett, col_ph, col_humus):
+        df2[col] = df2[col].astype(str).str.replace(",",".", regex=False)
 
     # 3) Numerisch umwandeln
     df2[col_bd]      = pd.to_numeric(df2[col_bd], errors="coerce")
@@ -214,19 +214,16 @@ def build_horizonte_list(df):
     def parse_range(val):
         s = str(val).strip()
         m = re.match(r"<\s*(\d+(\.\d+)?)", s)
-        if m:
-            return float(m.group(1)) / 2
-        s2 = re.sub(r"[^\d\.\-]", "", s)
+        if m: return float(m.group(1))/2
+        s2 = re.sub(r"[^\d\.\-]","",s)
         if "-" in s2:
-            lo, hi = s2.split("-", 1)
-            try: return (float(lo) + float(hi)) / 2
+            lo, hi = s2.split("-",1)
+            try: return (float(lo)+float(hi))/2
             except: pass
-        try:
-            return float(s2)
-        except:
-            return None
+        try: return float(s2)
+        except: return None
 
-    df2["humus_num"] = df2[col_humus].apply(parse_range)
+    df2["humus"] = df2[col_humus].apply(parse_range)
 
     # 5) Liste bauen
     horizonte = []
@@ -236,13 +233,12 @@ def build_horizonte_list(df):
             "z_top":    r["z_top"],
             "z_bot":    r["z_bot"],
             "bd":       r[col_bd],
-            "humus":    r["humus_num"],
+            "humus":    r["humus"],
             "pH":       r[col_ph],
             "Bodenart": r[col_bodenart],
             "skelett":  r[col_skelett] if pd.notna(r[col_skelett]) else 0
         })
     return horizonte
-
 def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float | None:
     """
     Berechnet die mittlere Kapillar-Aufstiegsrate (mm/d).
