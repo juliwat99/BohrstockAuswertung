@@ -93,7 +93,7 @@ if run:
         c1.metric("Humusvorrat 1 m (Mg/ha)", f"{total_hum*10:.1f}")
         c2.metric("pH Oberboden",           f"{ph_wert:.2f}")
         c3.metric("nFK (mm)",               nfk_value)
-        c4.metric("Kalkbedarf (dt CaO/ha)", kalk_value or "–")
+        c4.metric("Kalkbedarf (dt CaO/ha)", kalk_value)
         c5.metric("Kap. Aufstiegsrate (mm/d)", f"{kap_rate}")
 
         st.markdown("---")
