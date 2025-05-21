@@ -115,11 +115,19 @@ if run:
         bg, ph_wert, humus_wert,
         nutzungsart=nutzung.lower(),
         df_acker=df_acker,
-        df_gruen=df_gruen,
+        df_gruen=df_gruen
     )
     if msg:
-        st.warning(f"⚠️ {msg}")
-    kalk_value = f"{kalk:.1f}" if kalk is not None else "Kein Bedarf"
+        # wenn kein pH-Wert da ist, nur warnen und Kalk-Zelle leer lassen
+        if "Kein pH-Wert" in msg:
+            st.warning(f"⚠️ {msg}")
+            kalk_value = ""
+        else:
+            # echtes „nicht gefunden“-Problem → „Kein Bedarf“
+            st.warning(f"⚠️ {msg}")
+            kalk_value = "Kein Bedarf"
+    else:
+        kalk_value = f"{kalk:.1f}"
 
     # — 7) Kapillar-Aufstiegsrate —
     try:
