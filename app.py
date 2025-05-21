@@ -67,16 +67,15 @@ if run:
     # 4) Kalkbedarf
     df_acker = pd.read_csv("kalkbedarf_acker.csv")
     df_gruen = pd.read_csv("kalkbedarf_gruen.csv")
+     # 4) Kalkbedarf
     kalk, msg = berechne_kalkbedarf(
-        bg,
-        ph_wert,
-        humus_wert,
+        bg, ph_wert, humus_wert,
         nutzungsart=nutzung.lower(),
         df_acker=df_acker,
         df_gruen=df_gruen
     )
-    # Wenn kein Tabellenwert gefunden wurde, bleibt kalk_value leer
     kalk_value = f"{kalk:.1f}" if kalk is not None else "Kein Bedarf"
+
 
     # 5) Kapillar-Aufstiegsrate
     kap_rate = kapillaraufstiegsrate(horizonte, phyto) or ""
@@ -87,7 +86,7 @@ if run:
     # nFK auf volle mm runden
     nfk_value = f"{nfk:.0f}" if nfk is not None else ""
 
-    with tab3:
+   with tab3:
         st.subheader("✅ Zusammenfassung")
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("Humusvorrat 1 m (Mg/ha)", f"{total_hum*10:.1f}")
