@@ -177,51 +177,58 @@ def build_horizonte_list(df):
                 return c
         raise KeyError(f"Keine Spalte mit {keys!r} gefunden. Verfügbare: {cols}")
 
-    # mögliche Schlüssel‐Kombinationen
-    col_tiefe    = find_col("tiefe")                    # z.B. "Tiefe [cm]"
-    col_bd       = find_col("trocken", "dichte")        # "Trockenrohdichte [...]"
-    col_skelett  = find_col("skelett")                  # "Skelett [%]"
-    col_humus    = find_col("humus")                    # "Humus [%]"
-    col_ph       = find_col("ph")                       # "pH [...]"
-    col_bodenart = find_col("bodenart")                 # "Bodenart"
-    col_horizont = find_col("horizont")                 # "Horizont Nr." oder "Horizont Symbol"
+    # Spalten suchen
+    col_tiefe    = find_col("tiefe")
+    col_bd       = find_col("trocken", "dichte")
+    col_skelett  = find_col("skelett")
+    col_humus    = find_col("humus")
+    col_ph       = find_col("ph")
+    col_bodenart = find_col("bodenart")
+    col_horizont = find_col("horizont")
 
     df2 = df.copy()
 
-    # 1) Einheiten suffix entfernen, nur Ziffern, Bindestrich und Komma übriglassen
-    depth = df2[col_tiefe].astype(str).str.replace(r"[^\d\-,]", "", regex=True)
+    # 1) Normalisiere alle Dash‐Varianten auf ASCII‐Bindestrich
+    depth_raw = df2[col_tiefe].astype(str)
+    depth_norm = (
+        depth_raw
+        .str.replace("–", "-", regex=False)  # en‐dash
+        .str.replace("—", "-", regex=False)  # em‐dash
+        .str.replace(r"[^\d\-,]", "", regex=True)  # nur Ziffern, Komma, Minus übriglassen
+    )
 
-    # 2) Tiefe in z_top/z_bot splitten (einmaliges Split)
-    splits = depth.str.split("-", n=1, expand=True)
-    # falls kein '-' da war, Spalte 1 mit NaN füllen
+    # 2) Split in z_top / z_bot (einmaliges n=1)
+    splits = depth_norm.str.split("-", n=1, expand=True)
     if splits.shape[1] == 1:
         splits[1] = pd.NA
 
     df2["z_top"] = pd.to_numeric(splits[0], errors="coerce")
     df2["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
 
-    # 3) numerisch umwandeln
+    # 3) Numerisch umwandeln
     df2[col_bd]      = pd.to_numeric(df2[col_bd], errors="coerce")
     df2[col_skelett] = pd.to_numeric(df2[col_skelett], errors="coerce")
     df2[col_ph]      = pd.to_numeric(df2[col_ph], errors="coerce")
 
-    # 4) Humus-Werte parsen (z.B. "<1", "1-2", "2")
+    # 4) Humus parsen (<x / lo-hi / x)
     def parse_range(val):
         s = str(val).strip()
         m = re.match(r"<\s*(\d+(\.\d+)?)", s)
         if m:
-            return float(m.group(1))/2
+            return float(m.group(1)) / 2
         s2 = re.sub(r"[^\d\.\-]", "", s)
         if "-" in s2:
-            lo, hi = s2.split("-",1)
-            try: return (float(lo)+float(hi))/2
+            lo, hi = s2.split("-", 1)
+            try: return (float(lo) + float(hi)) / 2
             except: pass
-        try: return float(s2)
-        except: return None
+        try:
+            return float(s2)
+        except:
+            return None
 
     df2["humus_num"] = df2[col_humus].apply(parse_range)
 
-    # 5) Liste der Horizonte zusammenbauen
+    # 5) Liste bauen
     horizonte = []
     for _, r in df2.iterrows():
         horizonte.append({
@@ -235,6 +242,7 @@ def build_horizonte_list(df):
             "skelett":  r[col_skelett] if pd.notna(r[col_skelett]) else 0
         })
     return horizonte
+
 def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float | None:
     """
     Berechnet die mittlere Kapillar-Aufstiegsrate (mm/d).
