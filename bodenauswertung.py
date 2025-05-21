@@ -181,46 +181,53 @@ def build_horizonte_list(df):
     col_bodenart = find_col("bodenart")
     col_horizont = find_col("horizont")
 
+    df2 = df.copy()
+
     # Tiefen splitten
-    depth = df[col_tiefe].astype(str).str.strip()
+    depth = df2[col_tiefe].astype(str).str.strip()
     splits = depth.str.split("-", expand=True)
-    df = df.copy()
-    df["z_top"] = pd.to_numeric(splits[0], errors="coerce")
-    df["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
+    df2["z_top"] = pd.to_numeric(splits[0], errors="coerce")
+    df2["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
 
     # Numerisch
-    df[col_bd]      = pd.to_numeric(df[col_bd], errors="coerce")
-    df[col_skelett] = pd.to_numeric(df[col_skelett], errors="coerce")
-    df[col_ph]      = pd.to_numeric(df[col_ph], errors="coerce")
+    df2[col_bd] = pd.to_numeric(df2[col_bd], errors="coerce")
+    df2[col_ph] = pd.to_numeric(df2[col_ph], errors="coerce")
 
-    # Humus parsen
-    def parse_range(val):
+    # Parser für Humus und Skelett
+    def parse_range(val, default=0.0):
         s = str(val).strip()
-        m = re.match(r"<\s*(\d+(\.\d+)?)", s)
+        # <X → X/2
+        m = re.match(r'<\s*(\d+(\.\d+)?)', s)
         if m:
             return float(m.group(1)) / 2
-        s2 = s.replace("<","").replace(">","").strip()
-        if "-" in s2:
-            lo, hi = s2.split("-",1)
-            try: return (float(lo)+float(hi))/2
-            except: pass
-        try: return float(s2)
-        except: return None
+        # Bereich "a-b" → (a+b)/2
+        s2 = s.replace('<','').replace('>','').strip()
+        if '-' in s2:
+            lo, hi = s2.split('-',1)
+            try:
+                return (float(lo)+float(hi)) / 2
+            except:
+                return default
+        # einfacher float
+        try:
+            return float(s2)
+        except:
+            return default
 
-    df["humus_num"] = df[col_humus].apply(parse_range)
-
-    # Liste bauen
+    df2["humus_num"]   = df2[col_humus].apply(lambda v: parse_range(v, default=0.0))
+    df2["skelett_num"] = df2[col_skelett].apply(lambda v: parse_range(v, default=0.0))
+    
     horizonte = []
-    for _, row in df.iterrows():
+    for _, row in df2.iterrows():
         horizonte.append({
             "hz":       row[col_horizont],
             "z_top":    row["z_top"],
             "z_bot":    row["z_bot"],
-            "bd":       row[col_bd],
+            "bd":       row[col_bd]   or 0.0,
             "humus":    row["humus_num"],
-            "pH":       row[col_ph],
+            "pH":       row[col_ph]    or 0.0,
             "Bodenart": row[col_bodenart],
-            "skelett":  row[col_skelett] or 0
+            "skelett":  row["skelett_num"]
         })
     return horizonte
 #(7) NFwa
