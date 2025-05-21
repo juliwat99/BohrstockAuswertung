@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import io
+import csv
+from io import StringIO
 
 from bodenauswertung import (
     humusvorrat,
@@ -46,12 +48,25 @@ if not uploaded:
     st.info("Bitte lade eine Datei in der Sidebar hoch.")
     st.stop()
 
-# — 2) Datei einlesen mit Fehler-Handling —
+# — 2) Datei einlesen mit Sniffer / Fehler-Handling —
 try:
     if uploaded.name.lower().endswith(("xls","xlsx")):
         df = pd.read_excel(uploaded)
     else:
-        df = pd.read_csv(uploaded)
+        # Inhalt als Text
+        raw = uploaded.getvalue().decode("utf-8", errors="ignore")
+        # Sniff separater
+        try:
+            dialect = csv.Sniffer().sniff(raw, delimiters=[",",";","\t","|"])
+            sep = dialect.delimiter
+        except csv.Error:
+            sep = ","  # Fallback
+        df = pd.read_csv(
+            StringIO(raw),
+            sep=sep,
+            engine="python",
+            decimal=","
+        )
 except Exception as e:
     st.error(f"❌ Fehler beim Einlesen der Datei: {e}")
     st.stop()
@@ -118,12 +133,10 @@ if run:
         df_gruen=df_gruen
     )
     if msg:
-        # wenn kein pH-Wert da ist, nur warnen und Kalk-Zelle leer lassen
         if "Kein pH-Wert" in msg:
             st.warning(f"⚠️ {msg}")
             kalk_value = ""
         else:
-            # echtes „nicht gefunden“-Problem → „Kein Bedarf“
             st.warning(f"⚠️ {msg}")
             kalk_value = "Kein Bedarf"
     else:
