@@ -151,27 +151,68 @@ if run:
         st.warning(f"⚠️ nFK-Fehler: {e}")
         nfk_text = "Fehler"
 
-    # — Tab 3: Rechenweg Humusvorrat —
+       # — Tab 3: Rechenweg Humus, nFK & Kapillar-Aufstieg —
     with tab3:
-        st.subheader("🧮 Rechenweg Humusvorrat bis 100 cm")
-        st.markdown("""
-        1. **z_bot_filled** = `z_bot` (falls vorhanden) sonst 100  
-        2. **eff_z_bot**     = `min(z_bot_filled, 100)`  
-        3. **eff_dicke_cm**  = `max(eff_z_bot − z_top, 0)`  
-        4. **humus_g_cm2**   = `(humus% / 100) × bd[g/cm³] × eff_dicke_cm`  
-        5. **humus_kg_m2**   = `humus_g_cm2 × 10`  
+        st.subheader("🧮 Rechenweg")
 
-        Summe aller `humus_kg_m2` → Humusvorrat [kg/m²] (×10 → [Mg/ha]).
-        """)
+        # 1) Humusvorrat (wie gehabt) …
+        st.markdown("**Humusvorrat bis 100 cm**")
         st.dataframe(
             df_humus[[
-                "hz", "z_top", "z_bot", "z_bot_filled",
-                "eff_z_bot", "eff_dicke_cm",
-                "bd", "humus", "humus_g_cm2", "humus_kg_m2"
-            ]],
-            use_container_width=True
+                "hz","z_top","z_bot","z_bot_filled","eff_z_bot","eff_dicke_cm",
+                "bd","humus","humus_g_cm2","humus_kg_m2"
+            ]], use_container_width=True
         )
-        st.metric("Humusvorrat 1 m (Mg/ha)", hum_text)
+        st.write(f"→ Summe humus_kg_m2 ×10 = **{total_hum*10:.1f} Mg/ha**")
+
+        # 2) nFK
+        st.markdown("**nFK-Berechnung bis physiogr. Tiefe**")
+        # Baue ein kleines DataFrame mit den Einzelschritten
+        rows = []
+        for h in horizonte:
+            # effektive Dicke
+            z_bot_f = h["z_bot"] if h["z_bot"] is not None else phyto
+            eff_bot = min(z_bot_f, phyto)
+            eff_d   = max(eff_bot - h["z_top"], 0)
+            zone    = zone_von_bd(h["bd"])
+            base_fk = df_full.at[h["Bodenart"], f"nutzbareFK_{zone}"]
+            korr_h  = get_org_factor(h["Bodenart"], h["humus"])
+            wert    = base_fk * korr_h * (1 - h["skelett"]/100)
+            beitrag = wert * eff_d/100*10
+            rows.append({
+                "hz": h["hz"],
+                "z_top": h["z_top"],
+                "eff_dicke_cm": eff_d,
+                "Zone": zone,
+                "Basis FK [mm/100cm]": base_fk,
+                "Humus-Faktor": f"{korr_h:.2f}",
+                "Skelett-Abzug": f"{h['skelett']}%",
+                "FK korr. [mm/100cm]": f"{wert:.1f}",
+                "Beitrag [mm]": f"{beitrag:.1f}"
+            })
+        df_nfk = pd.DataFrame(rows)
+        st.dataframe(df_nfk, use_container_width=True)
+        st.write(f"→ Summe Beitrag = **{nfk:.0f} mm**")
+
+        # 3) Kapillar-Aufstiegsrate
+        st.markdown("**Kapillar-Aufstiegsrate**")
+        # Details
+        gr_h = next((h for h in horizonte if isinstance(h["hz"], str) and "gr" in h["hz"].lower()), None)
+        if gr_h:
+            start_cm = gr_h["z_top"]
+            dist_cm  = start_cm - phyto
+            dm_sel   = min(_KAP_DMS, key=lambda x: abs(x-dist_cm/10))
+            st.write(f"- Gr-Horizont **{gr_h['hz']}**, z_top = {start_cm} cm")
+            st.write(f"- physiologische Tiefe = {phyto} cm → Abstand = {dist_cm} cm = {dist_cm/10:.1f} dm → Spalte = {dm_sel} dm")
+            st.write(f"- Bodenart im Gr-Horizont: {gr_h['Bodenart']}")
+            val = _KAP_TABLE.loc[
+                _KAP_TABLE["Bodenart"].str.lower().str.contains(gr_h["Bodenart"].split()[0].lower()),
+                str(dm_sel)
+            ].iat[0]
+            st.write(f"- Tabellen-Wert = `{val}` → km/d = **{float(val.replace(',','.')):.2f}**")
+        else:
+            st.write("→ Kein Gr-Horizont gefunden, Rate = 0 mm/d")
+
 
     # — Tab 4: Endergebnisse —
     with tab4:
