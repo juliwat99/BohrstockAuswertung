@@ -189,10 +189,10 @@ if run:
                 "z_top": h["z_top"],
                 "eff_dicke_cm": eff_d,
                 "Zone": zone,
-                "Basis FK [mm/100cm]": base_fk,
+                "Basis FK [mm]": base_fk,
                 "Humus-Faktor": f"{korr_h:.2f}",
                 "Skelett-Abzug": f"{h['skelett']}%",
-                "FK korr. [mm/100cm]": f"{wert:.1f}",
+                "FK korr. [mm]": f"{wert:.2f}",
                 "Beitrag [mm]": f"{beitrag:.1f}"
             })
         df_nfk = pd.DataFrame(rows)
