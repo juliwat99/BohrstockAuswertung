@@ -210,12 +210,22 @@ if run:
             st.write(f"- phys. Tiefe = {phyto} cm → Abstand = {dist_cm} cm = {dist_cm/10:.1f} dm → Spalte = {dm_sel} dm")
             st.write(f"- Bodenart im Gr-Horizont: {gr_h['Bodenart']}")
             val = _KAP_TABLE.loc[
-                _KAP_TABLE["Bodenart"].str.lower().str.contains(gr_h["Bodenart"].split()[0].lower()),
-                str(dm_sel)
-            ].iat[0]
-            st.write(f"- Tabellen-Wert = `{val}` → **{float(val.replace(',','.')):.2f} mm/d**")
-        else:
-            st.write("→ Kein Gr-Horizont gefunden, Rate = 0 mm/d")
+    _KAP_TABLE["Bodenart"].str.lower().str.contains(gr_h["Bodenart"].split()[0].lower()),
+    str(dm_sel)
+].iat[0]
+
+# Wenn der Wert mit ">" beginnt, geben wir ihn direkt aus,
+# sonst wandeln wir in float um.
+if isinstance(val, str) and val.strip().startswith(">"):
+    rate_str = val.strip().replace(",", ".")
+    st.write(f"- Tabellen-Wert = `{val}` → **{rate_str} mm/d (>)**")
+else:
+    try:
+        rate = float(str(val).replace(",", "."))
+        st.write(f"- Tabellen-Wert = `{val}` → **{rate:.2f} mm/d**")
+    except ValueError:
+        st.write(f"- Tabellen-Wert = `{val}` → **k.A.**")
+
 
     # — Tab 4: Endergebnisse —
     with tab4:
