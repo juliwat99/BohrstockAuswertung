@@ -200,44 +200,45 @@ if run:
         st.write(f"→ Summe Beitrag = **{nfk:.0f} mm**")
 
          # 3) Kapillar-Aufstiegsrate
-st.markdown("**Kapillar-Aufstiegsrate**")
-gr_h = next(
-    (h for h in horizonte if isinstance(h.get("hz"), str) and "gr" in h["hz"].lower()),
-    None
-)
-if not gr_h:
-    st.write("→ Kein Gr-Horizont gefunden → Rate = 0 mm/d")
-else:
-    start_cm = gr_h["z_top"]
-    dist_cm  = start_cm - phyto
-
-    # **Neu**: wenn der Abstand ≤ 0, keine Aufstiegsmächtigkeit → 0 mm/d
-    if dist_cm <= 0:
-        st.write(f"- Gr-Horizont **{gr_h['hz']}**, z_top = {start_cm} cm")
-        st.write(f"- physiologische Tiefe = {phyto} cm → Abstand = {dist_cm} cm ≤ 0 → Rate = 0 mm/d")
-    else:
-        dist_dm  = dist_cm / 10
-        dm_sel   = min(_KAP_DMS, key=lambda x: abs(x - dist_dm))
-
-        st.write(f"- Gr-Horizont **{gr_h['hz']}**, z_top = {start_cm} cm")
-        st.write(f"- physiologische Tiefe = {phyto} cm → Abstand = {dist_cm} cm = {dist_dm:.1f} dm → Spalte = {dm_sel} dm")
-        st.write(f"- Bodenart im Gr-Horizont: {gr_h['Bodenart']}")
-
-        val = _KAP_TABLE.loc[
-            _KAP_TABLE["Bodenart"]
-                .str.lower()
-                .str.contains(gr_h["Bodenart"].split()[0].lower(), na=False),
-            str(dm_sel)
-        ].iat[0]
-
-        if isinstance(val, str) and val.strip().startswith(">"):
-            st.write(f"- Tabellen-Wert = `{val}` → **> {val.strip()[1:]} mm/d**")
+        st.markdown("**Kapillar-Aufstiegsrate**")
+        gr_h = next(
+            (h for h in horizonte if isinstance(h.get("hz"), str) and "gr" in h["hz"].lower()),
+            None
+        )
+        if not gr_h:
+            st.write("→ Kein Gr-Horizont gefunden → Rate = 0 mm/d")
         else:
-            try:
-                rate = float(str(val).replace(",", "."))
-                st.write(f"- Tabellen-Wert = `{val}` → **{rate:.2f} mm/d**")
-            except:
-                st.write(f"- Tabellen-Wert = `{val}` → **k.A.**")
+            start_cm = gr_h["z_top"]
+            dist_cm  = start_cm - phyto
+        
+            # **Neu**: wenn der Abstand ≤ 0, keine Aufstiegsmächtigkeit → 0 mm/d
+            if dist_cm <= 0:
+                st.write(f"- Gr-Horizont **{gr_h['hz']}**, z_top = {start_cm} cm")
+                st.write(f"- physiologische Tiefe = {phyto} cm → Abstand = {dist_cm} cm ≤ 0 → Rate = 0 mm/d")
+            else:
+                dist_dm  = dist_cm / 10
+                dm_sel   = min(_KAP_DMS, key=lambda x: abs(x - dist_dm))
+        
+                st.write(f"- Gr-Horizont **{gr_h['hz']}**, z_top = {start_cm} cm")
+                st.write(f"- physiologische Tiefe = {phyto} cm → Abstand = {dist_cm} cm = {dist_dm:.1f} dm → Spalte = {dm_sel} dm")
+                st.write(f"- Bodenart im Gr-Horizont: {gr_h['Bodenart']}")
+        
+                val = _KAP_TABLE.loc[
+                    _KAP_TABLE["Bodenart"]
+                        .str.lower()
+                        .str.contains(gr_h["Bodenart"].split()[0].lower(), na=False),
+                    str(dm_sel)
+                ].iat[0]
+        
+                if isinstance(val, str) and val.strip().startswith(">"):
+                    st.write(f"- Tabellen-Wert = `{val}` → **> {val.strip()[1:]} mm/d**")
+                else:
+                    try:
+                        rate = float(str(val).replace(",", "."))
+                        st.write(f"- Tabellen-Wert = `{val}` → **{rate:.2f} mm/d**")
+                    except:
+                        st.write(f"- Tabellen-Wert = `{val}` → **k.A.**")
+
 
 
 
