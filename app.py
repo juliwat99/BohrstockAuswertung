@@ -10,6 +10,12 @@ from bodenauswertung import (
     build_horizonte_list,
     humuskategorie,
     kapillaraufstiegsrate,
+    # Für Rechenweg
+    zone_von_bd,
+    get_org_factor,
+    df_full,
+    _KAP_TABLE,
+    _KAP_DMS
 )
 
 # — Seite konfigurieren —
@@ -68,7 +74,7 @@ if run:
         st.error(f"❌ Fehler bei Verarbeitung der Horizonte: {e}")
         st.stop()
 
-    # 5) Tabs aufbauen (jetzt mit Rechenweg)
+    # 5) Tabs aufbauen
     tab1, tab2, tab3, tab4 = st.tabs([
         "Rohdaten", "Horizonte", "Rechenweg", "Ergebnisse"
     ])
@@ -151,26 +157,25 @@ if run:
         st.warning(f"⚠️ nFK-Fehler: {e}")
         nfk_text = "Fehler"
 
-       # — Tab 3: Rechenweg Humus, nFK & Kapillar-Aufstieg —
+    # — Tab 3: Rechenweg Humus, nFK & Kapillar-Aufstieg —
     with tab3:
         st.subheader("🧮 Rechenweg")
 
-        # 1) Humusvorrat (wie gehabt) …
+        # 1) Humusvorrat
         st.markdown("**Humusvorrat bis 100 cm**")
         st.dataframe(
             df_humus[[
                 "hz","z_top","z_bot","z_bot_filled","eff_z_bot","eff_dicke_cm",
                 "bd","humus","humus_g_cm2","humus_kg_m2"
-            ]], use_container_width=True
+            ]],
+            use_container_width=True
         )
-        st.write(f"→ Summe humus_kg_m2 ×10 = **{total_hum*10:.1f} Mg/ha**")
+        st.write(f"→ Summe humus_kg_m2 × 10 = **{total_hum*10:.1f} Mg/ha**")
 
         # 2) nFK
         st.markdown("**nFK-Berechnung bis physiogr. Tiefe**")
-        # Baue ein kleines DataFrame mit den Einzelschritten
         rows = []
         for h in horizonte:
-            # effektive Dicke
             z_bot_f = h["z_bot"] if h["z_bot"] is not None else phyto
             eff_bot = min(z_bot_f, phyto)
             eff_d   = max(eff_bot - h["z_top"], 0)
@@ -196,51 +201,48 @@ if run:
 
         # 3) Kapillar-Aufstiegsrate
         st.markdown("**Kapillar-Aufstiegsrate**")
-        # Details
         gr_h = next((h for h in horizonte if isinstance(h["hz"], str) and "gr" in h["hz"].lower()), None)
         if gr_h:
             start_cm = gr_h["z_top"]
             dist_cm  = start_cm - phyto
             dm_sel   = min(_KAP_DMS, key=lambda x: abs(x-dist_cm/10))
             st.write(f"- Gr-Horizont **{gr_h['hz']}**, z_top = {start_cm} cm")
-            st.write(f"- physiologische Tiefe = {phyto} cm → Abstand = {dist_cm} cm = {dist_cm/10:.1f} dm → Spalte = {dm_sel} dm")
+            st.write(f"- phys. Tiefe = {phyto} cm → Abstand = {dist_cm} cm = {dist_cm/10:.1f} dm → Spalte = {dm_sel} dm")
             st.write(f"- Bodenart im Gr-Horizont: {gr_h['Bodenart']}")
             val = _KAP_TABLE.loc[
                 _KAP_TABLE["Bodenart"].str.lower().str.contains(gr_h["Bodenart"].split()[0].lower()),
                 str(dm_sel)
             ].iat[0]
-            st.write(f"- Tabellen-Wert = `{val}` → km/d = **{float(val.replace(',','.')):.2f}**")
+            st.write(f"- Tabellen-Wert = `{val}` → **{float(val.replace(',','.')):.2f} mm/d**")
         else:
             st.write("→ Kein Gr-Horizont gefunden, Rate = 0 mm/d")
-
 
     # — Tab 4: Endergebnisse —
     with tab4:
         st.subheader("✅ Zusammenfassung")
         c1,c2,c3,c4,c5 = st.columns(5)
-        c1.metric("Humusvorrat 1 m (Mg/ha)", hum_text)
-        c2.metric("pH Oberboden",            f"{ph_wert:.2f}" if pd.notna(ph_wert) else "N/A")
-        c3.metric("nFK (mm)",                nfk_text)
-        c4.metric("Kalkbedarf (dt CaO/ha)",  kalk_value or "–")
-        c5.metric("Kapillar-Rate (mm/d)",    kap_text)
+        c1.metric("Humusvorrat 1 m (Mg/ha)",    hum_text)
+        c2.metric("pH Oberboden",              f"{ph_wert:.2f}" if pd.notna(ph_wert) else "N/A")
+        c3.metric("nFK (mm)",                  nfk_text)
+        c4.metric("Kalkbedarf (dt CaO/ha)",    kalk_value or "–")
+        c5.metric("Kapillar-Rate (mm/d)",      kap_text)
 
         st.markdown("---")
         result_df = pd.DataFrame([{
-            "Bohrstock-Nr.":                   bohrnr,
-            "Rechtswert":                      rechts,
-            "Hochwert":                        hoch,
-            "Bodentyp":                        bodentyp,
-            "Bodenform":                       bodenform,
-            "Phys. Gründigkeit (cm)":          phyto,
-            "Humusvorrat bis 1 m (Mg/ha)":     total_hum*10,
-            "pH Oberboden":                    ph_wert,
-            "Kalkbedarf (dt CaO/ha)":          kalk_value,
-            "nFK (mm)":                        nfk_text,
-            "Kapillar-Rate (mm/d)":            kap_text
+            "Bohrstock-Nr.":                bohrnr,
+            "Rechtswert":                   rechts,
+            "Hochwert":                     hoch,
+            "Bodentyp":                     bodentyp,
+            "Bodenform":                    bodenform,
+            "Phys. Gründigkeit (cm)":       phyto,
+            "Humusvorrat bis 1 m (Mg/ha)":  total_hum*10,
+            "pH Oberboden":                 ph_wert,
+            "Kalkbedarf (dt CaO/ha)":       kalk_value,
+            "nFK (mm)":                     nfk_text,
+            "Kapillar-Rate (mm/d)":         kap_text
         }])
         st.dataframe(result_df, use_container_width=True)
 
-        # 10) Download
         buf = io.BytesIO()
         try:
             with pd.ExcelWriter(buf, engine="openpyxl") as w:
@@ -250,7 +252,7 @@ if run:
                 "Ergebnis als Excel herunterladen",
                 data=buf,
                 file_name="ergebnis.xlsx",
-                mime="application/vnd.openxmlformats-officedocument-spreadsheetml.sheet",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
         except Exception as e:
             st.error(f"❌ Export-Fehler: {e}")
