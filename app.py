@@ -199,42 +199,40 @@ if run:
         st.dataframe(df_nfk, use_container_width=True)
         st.write(f"→ Summe Beitrag = **{nfk:.0f} mm**")
 
-        # 3) Kapillar-Aufstiegsrate
-st.markdown("**Kapillar-Aufstiegsrate**")
-gr_h = next((h for h in horizonte
+         # 3) Kapillar-Aufstiegsrate
+        st.markdown("**Kapillar-Aufstiegsrate**")
+        gr_h = next(
+            (h for h in horizonte
              if isinstance(h.get("hz"), str) and "gr" in h["hz"].lower()),
-            None)
+            None
+        )
+        if gr_h:
+            start_cm = gr_h["z_top"]
+            dist_cm  = start_cm - phyto
+            dist_dm  = dist_cm / 10
+            dm_sel   = min(_KAP_DMS, key=lambda x: abs(x - dist_dm))
 
-if gr_h:
-    start_cm = gr_h["z_top"]
-    dist_cm  = start_cm - phyto
-    dist_dm  = dist_cm / 10
-    dm_sel   = min(_KAP_DMS, key=lambda x: abs(x - dist_dm))
+            st.write(f"- Gr-Horizont **{gr_h['hz']}**, z_top = {start_cm} cm")
+            st.write(f"- Abstand = {dist_cm} cm = {dist_dm:.1f} dm → Spalte = {dm_sel} dm")
+            st.write(f"- Bodenart im Gr-Horizont: {gr_h['Bodenart']}")
 
-    st.write(f"- Gr-Horizont **{gr_h['hz']}**, z_top = {start_cm} cm")
-    st.write(f"- Abstand = {dist_cm} cm = {dist_dm:.1f} dm → Spalte = {dm_sel} dm")
-    st.write(f"- Bodenart im Gr-Horizont: {gr_h['Bodenart']}")
+            val = _KAP_TABLE.loc[
+                _KAP_TABLE["Bodenart"].str.lower()
+                          .str.contains(gr_h["Bodenart"].split()[0].lower()),
+                str(dm_sel)
+            ].iat[0]
 
-    # Wert aus der Tabelle holen
-    val = _KAP_TABLE.loc[
-        _KAP_TABLE["Bodenart"].str.lower()
-                  .str.contains(gr_h["Bodenart"].split()[0].lower()),
-        str(dm_sel)
-    ].iat[0]
-
-    # Wenn es ein ">…"‐Format ist, direkt ausgeben
-    if isinstance(val, str) and val.strip().startswith(">"):
-        rate_str = val.strip().replace(",", ".")
-        st.write(f"- Tabellen-Wert = `{val}` → **{rate_str} mm/d (>)**")
-    else:
-        # Versuch, in float zu konvertieren
-        try:
-            rate = float(str(val).replace(",", "."))
-            st.write(f"- Tabellen-Wert = `{val}` → **{rate:.2f} mm/d**")
-        except:
-            st.write(f"- Tabellen-Wert = `{val}` → **k.A.**")
-else:
-    st.write("→ Kein Gr-Horizont gefunden → Rate = 0 mm/d")
+            if isinstance(val, str) and val.strip().startswith(">"):
+                rate_str = val.strip().replace(",", ".")
+                st.write(f"- Tabellen-Wert = `{val}` → **{rate_str} mm/d (>)**")
+            else:
+                try:
+                    rate = float(str(val).replace(",", "."))
+                    st.write(f"- Tabellen-Wert = `{val}` → **{rate:.2f} mm/d**")
+                except:
+                    st.write(f"- Tabellen-Wert = `{val}` → **k.A.**")
+        else:
+            st.write("→ Kein Gr-Horizont gefunden → Rate = 0 mm/d")
 
 
 
