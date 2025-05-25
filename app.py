@@ -69,7 +69,7 @@ df[depth_col] = (
     df[depth_col]
       .astype(str)
       .str.replace(r"(\d+)\+", r"\1-", regex=True)
-
+)
 if run:
     # 4) Horizonte verarbeiten
     try:
