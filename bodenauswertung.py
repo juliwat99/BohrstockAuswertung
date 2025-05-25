@@ -207,7 +207,7 @@ def build_horizonte_list(df):
     .str.replace("–", "-", regex=False)
     .str.replace("—", "-", regex=False)
     .str.replace(r"(\d+)\+", r"\1-", regex=True)  # "70+" → "70-"
-)
+    	)
 splits = depth.str.split("-", expand=True)
 df["z_top"] = pd.to_numeric(splits[0], errors="coerce")
 df["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
