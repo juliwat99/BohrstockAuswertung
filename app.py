@@ -183,15 +183,22 @@ if run:
         st.markdown("**nFK-Berechnung bis physiogr. Tiefe**")
         rows = []
         for h in horizonte:
-            # 1) z_bot_filled: wenn z_bot fehlt, nimm physiogr
+            # 1) z_bot_f: für fehlende Werte oder beim letzten Horizont immer bis zur physiol. Gründigkeit
+            #    dazu vorher den maximalen z_top einmal berechnen
+            max_z_top = max(hz["z_top"] for hz in horizonte if hz.get("z_top") is not None)
+            
             z_bot = h["z_bot"]
-            if pd.isna(z_bot):
+            # Wenn dieser Horizont der tieftiefste ist, egal ob z_bot angegeben oder nicht,
+            # wird er bis phyto extrapoliert:
+            if h["z_top"] == max_z_top or pd.isna(z_bot):
                 z_bot_f = phyto
             else:
                 z_bot_f = z_bot
-        
-            # 2) eff_bot: nicht tiefer als physiologische Gründigkeit
+            
+            # 2) eff_bot: nie tiefer als physiologische Gründigkeit
             eff_bot = min(z_bot_f, phyto)
+        
+            
         
             # 3) eff_dicke_cm: nie negativ
             eff_d = max(eff_bot - h["z_top"], 0)
