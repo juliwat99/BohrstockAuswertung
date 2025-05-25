@@ -210,25 +210,29 @@ def build_horizonte_list(df):
 
     # — Parser für Zahlen, Ranges und Prozentangaben —
     def parse_number_or_range(val):
-        s = str(val).strip()
-        # normalize dashes, comma→dot, strip percent
-        s = s.replace("–", "-").replace("—", "-").replace(",", ".").replace("%", "")
-        # "<X" → X/2
-        m = re.match(r"<\s*(\d+(\.\d+)?)$", s)
+    s = str(val).strip()
+    # normalize dashes, comma→dot, strip percent
+    s = s.replace("–", "-").replace("—", "-").replace(",", ".").replace("%", "")
+    # **1) Wenn s mit '<' beginnt, nimm die erste Zahl und teile durch 2 → UNABHÄNGIG von möglichen '-Y' danach**
+    if s.startswith("<"):
+        m = re.match(r"<\s*(\d+(\.\d+)?)", s)
         if m:
             return float(m.group(1)) / 2
-        # "X-Y" → Mittelwert
-        if "-" in s:
-            lo, hi = s.split("-", 1)
-            try:
-                return (float(lo) + float(hi)) / 2
-            except:
-                pass
-        # einzelner Wert
+
+    # 2) Range "X-Y" → Mittelwert
+    if "-" in s:
+        lo, hi = s.split("-", 1)
         try:
-            return float(s)
+            return (float(lo) + float(hi)) / 2
         except:
-            return None
+            pass
+
+    # 3) Einzelner Wert
+    try:
+        return float(s)
+    except:
+        return None
+
 
     # — Dichte (bd) —
     df[col_bd] = df[col_bd].apply(parse_number_or_range)
