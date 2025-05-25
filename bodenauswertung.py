@@ -202,11 +202,25 @@ def build_horizonte_list(df):
     df = df.copy()
 
     # — Tiefen splitten (Normalisierung aller Dash‐Varianten) —
-    depth = df[col_tiefe].astype(str).str.strip()
-    depth = depth.str.replace("–", "-").str.replace("—", "-")
+        # — Tiefen normalisieren (Bindestriche, '+' und fehlende Obergrenzen) —
+    depth = (
+        df[col_tiefe]
+          .astype(str)
+          .str.strip()
+          # Unicode‐Striche → normaler Bindestrich
+          .str.replace("–", "-", regex=False)
+          .str.replace("—", "-", regex=False)
+          # "70+" → "70-"
+          .str.replace(r"(\d+)\+", r"\1-", regex=True)
+          # alles, was nach Zahl- endet, auf Zahl-100 setzen
+          .str.replace(r"^(\d+)-\s*$", r"\1-100", regex=True)
+    )
+
+    # jetzt splitten und in numerische Spalten überführen
     splits = depth.str.split("-", expand=True)
     df["z_top"] = pd.to_numeric(splits[0], errors="coerce")
     df["z_bot"] = pd.to_numeric(splits[1], errors="coerce")
+
 
     # — Parser für Zahlen, Ranges und Prozentangaben —
     def parse_number_or_range(val):
