@@ -210,35 +210,35 @@ def build_horizonte_list(df):
 
     # — Parser für Zahlen, Ranges und Prozentangaben —
     def parse_number_or_range(val):
-    s = str(val).strip()
-    # normalize dashes, comma→dot, strip percent, normalize ≥
-    s = (
-        s.replace("–", "-")
-         .replace("—", "-")
-         .replace(",", ".")
-         .replace("%", "")
-         .replace("≥", ">")
-    )
-    # "<X" → X/2
-    m = re.match(r"<\s*(\d+(\.\d+)?)$", s)
-    if m:
-        return float(m.group(1)) / 2
-    # ">X" → nimm X
-    m2 = re.match(r">\s*(\d+(\.\d+)?)$", s)
-    if m2:
-        return float(m2.group(1))
-    # "X-Y" → Mittelwert
-    if "-" in s:
-        lo, hi = s.split("-", 1)
+        s = str(val).strip()
+        # normalize dashes, comma→dot, strip percent, normalize ≥
+        s = (
+            s.replace("–", "-")
+             .replace("—", "-")
+             .replace(",", ".")
+             .replace("%", "")
+             .replace("≥", ">")
+        )
+        # "<X" → X/2
+        m = re.match(r"<\s*(\d+(\.\d+)?)$", s)
+        if m:
+            return float(m.group(1)) / 2
+        # ">X" → nimm X
+        m2 = re.match(r">\s*(\d+(\.\d+)?)$", s)
+        if m2:
+            return float(m2.group(1))
+        # "X-Y" → Mittelwert
+        if "-" in s:
+            lo, hi = s.split("-", 1)
+            try:
+                return (float(lo) + float(hi)) / 2
+            except:
+                pass
+        # einzelner Wert
         try:
-            return (float(lo) + float(hi)) / 2
+            return float(s)
         except:
-            pass
-    # einzelner Wert
-    try:
-        return float(s)
-    except:
-        return None
+            return None
     
 
     # — Dichte (bd) —
