@@ -63,6 +63,13 @@ except Exception as e:
     st.error(f"❌ Fehler beim Einlesen der Datei: {e}")
     st.stop()
 
+# 3.1) Tiefenangaben mit “+” normalisieren
+depth_col = [c for c in df.columns if "tiefe" in c.lower()][0]
+df[depth_col] = (
+    df[depth_col]
+      .astype(str)
+      .str.replace(r"(\d+)\+", r"\1-", regex=True)
+
 if run:
     # 4) Horizonte verarbeiten
     try:
