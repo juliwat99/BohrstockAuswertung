@@ -176,11 +176,11 @@ if run:
                 "z_top":               h["z_top"],
                 "eff_dicke_cm":        eff_d,
                 "Zone":                zone,
-                "Basis FK [mm]":       base_fk,
-                "Humus-Zuschlag [mm]": f"{korr:.2f}",
+                "Basis nFK in Vol%":       base_fk,
+                "Humus-Zuschlag in Vol%": f"{korr:.2f}",
                 "Skelett-Abzug":       f"{h['skelett']}%",
-                "FK korr. [mm]":       f"{wert:.1f}",
-                "Beitrag [mm]":        f"{beitrag:.1f}"
+                "korregierte nFK in Vol%":       f"{wert:.2f}",
+                "nFK [mm]":        f"{beitrag:.1f}"
             })
         df_nfk = pd.DataFrame(rows)
         st.dataframe(df_nfk, use_container_width=True)
