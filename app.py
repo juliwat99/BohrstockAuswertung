@@ -183,6 +183,17 @@ if run:
                 "nFK [mm]":        f"{beitrag:.1f}"
             })
         df_nfk = pd.DataFrame(rows)
+        df_nfk.columns = [
+            "hz",
+            "z_top",
+            "eff_dicke_cm",
+            "Zone",
+            "Basis nFK in Vol%",
+            "Humus-Zuschlag in Vol%",
+            "Skelett-Abzug",
+            "korregierte nFK in Vol%",
+            "nFK [mm]"
+        ]
         st.dataframe(df_nfk, use_container_width=True)
         st.write(f"→ Summe = **{nfk:.0f} mm**")
 
