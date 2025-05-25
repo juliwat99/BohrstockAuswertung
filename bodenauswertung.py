@@ -132,7 +132,7 @@ def get_org_factor(bodenart, humus):
     key = "Sand" if bodenart.startswith("S") else "LUT"
     for (low, high), perc in org_korrektur[key].items():
         if low <= humus < high:
-            return 1 + perc / 100
+            return perc
     return 1.0
 
 def nfk_horizont(bodenart, skelett, humus, zone):
