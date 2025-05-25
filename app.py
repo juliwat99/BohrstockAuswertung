@@ -183,24 +183,38 @@ if run:
         st.markdown("**nFK-Berechnung bis physiogr. Tiefe**")
         rows = []
         for h in horizonte:
-            z_bot_f = h["z_bot"] if h["z_bot"] is not None else phyto
+            # 1) z_bot_filled: wenn z_bot fehlt, nimm physiogr
+            z_bot = h["z_bot"]
+            if pd.isna(z_bot):
+                z_bot_f = phyto
+            else:
+                z_bot_f = z_bot
+        
+            # 2) eff_bot: nicht tiefer als physiologische Gründigkeit
             eff_bot = min(z_bot_f, phyto)
-            eff_d   = max(eff_bot - h["z_top"], 0)
+        
+            # 3) eff_dicke_cm: nie negativ
+            eff_d = max(eff_bot - h["z_top"], 0)
+        
+            # jetzt weiter mit Zone usw.
             zone    = zone_von_bd(h["bd"])
-            base_fk = df_full.at[h["Bodenart"], f"nutzbareFK_{zone}"]
-            korr_h  = get_org_factor(h["Bodenart"], h["humus"])
+            # Bodenart-Key ggf. vor “/” abschneiden
+            bod_key = str(h["Bodenart"]).split("/",1)[0].strip()
+            base_fk = df_full.at[bod_key, f"nutzbareFK_{zone}"]
+            korr_h  = get_org_factor(bod_key, h["humus"])
             wert    = base_fk * korr_h * (1 - h["skelett"]/100)
             beitrag = wert * eff_d/100*10
+        
             rows.append({
-                "hz": h["hz"],
-                "z_top": h["z_top"],
-                "eff_dicke_cm": eff_d,
-                "Zone": zone,
-                "Basis FK [mm]": base_fk,
-                "Humus-Faktor": f"{korr_h:.2f}",
-                "Skelett-Abzug": f"{h['skelett']}%",
-                "FK korr. [mm]": f"{wert:.2f}",
-                "Beitrag [mm]": f"{beitrag:.1f}"
+                "hz":             h["hz"],
+                "z_top":          h["z_top"],
+                "eff_dicke_cm":   eff_d,
+                "Zone":           zone,
+                "Basis FK [mm]":  base_fk,
+                "Humus-Faktor":   f"{korr_h:.2f}",
+                "Skelett-Abzug":  f"{h['skelett']}%",
+                "FK korr. [mm]":  f"{wert:.1f}",
+                "Beitrag [mm]":   f"{beitrag:.1f}"
             })
         df_nfk = pd.DataFrame(rows)
         st.dataframe(df_nfk, use_container_width=True)
