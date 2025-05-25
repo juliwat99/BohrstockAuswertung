@@ -141,7 +141,7 @@ def nfk_horizont(bodenart, skelett, humus, zone):
     """
     base = df_full.at[bodenart, f"nutzbareFK_{zone}"]
     # Humuskorrektur
-    base *= get_org_factor(bodenart, humus)
+    base += get_org_factor(bodenart, humus)
     # Abzug Skelettanteil
     return base * (1 - skelett / 100)
 
