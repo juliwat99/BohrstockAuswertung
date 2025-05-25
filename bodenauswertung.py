@@ -219,22 +219,35 @@ def build_horizonte_list(df):
              .replace("%", "")
              .replace("≥", ">")
         )
-        # "<X" → X/2
+    
+        # 1) "<X-Y" → unterer Wert X halbieren
+        if s.startswith("<") and "-" in s:
+            # entferne führendes '<', splitte an '-', nimm unteren Wert
+            lo = s.lstrip("<").split("-", 1)[0]
+            try:
+                return float(lo) / 2
+            except:
+                pass
+    
+        # 2) "<X" → X/2
         m = re.match(r"<\s*(\d+(\.\d+)?)$", s)
         if m:
             return float(m.group(1)) / 2
-        # ">X" → nimm X
+    
+        # 3) ">X" → X
         m2 = re.match(r">\s*(\d+(\.\d+)?)$", s)
         if m2:
             return float(m2.group(1))
-        # "X-Y" → Mittelwert
+    
+        # 4) "X-Y" → Mittelwert
         if "-" in s:
             lo, hi = s.split("-", 1)
             try:
                 return (float(lo) + float(hi)) / 2
             except:
                 pass
-        # einzelner Wert
+    
+        # 5) Einzelner Wert
         try:
             return float(s)
         except:
