@@ -206,12 +206,16 @@ if run:
             start_cm = gr_h["z_top"]
             dist_cm  = start_cm - phyto
             if dist_cm <= 0:
-                st.write(f"- Abstand = {dist_cm} cm ≤ 0 → **0 mm/d**")
+                # Liegt der Gr-Horizont in oder oberhalb der physiologischen Tiefe,
+                # soll hier 5 mm/d stehen:
+                st.write(f"- Abstand = {dist_cm} cm ≤ 0 → **5 mm/d**")
             else:
                 dist_dm = dist_cm/10
                 dm_sel  = min(_KAP_DMS, key=lambda x: abs(x-dist_dm))
                 val     = _KAP_TABLE.loc[
-                    _KAP_TABLE["Bodenart"].str.lower().str.contains(gr_h["Bodenart"].split()[0].lower(), na=False),
+                    _KAP_TABLE["Bodenart"]
+                        .str.lower()
+                        .str.contains(gr_h["Bodenart"].split()[0].lower(), na=False),
                     str(dm_sel)
                 ].iat[0]
                 if isinstance(val,str) and val.strip().startswith(">"):
