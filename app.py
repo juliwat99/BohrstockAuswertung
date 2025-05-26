@@ -232,6 +232,7 @@ if run:
             # aufsummiert für 20 Tage
             gesamt_20 = rate * 20
             st.write(f"→ **In 20 Tagen: {gesamt_20:.1f} mm**")
+            
     # Tab 4: Ergebnisse
     with tab4:
         st.subheader("✅ Zusammenfassung")
@@ -254,7 +255,8 @@ if run:
             "pH Oberboden":                ph_wert,
             "Kalkbedarf (dt CaO/ha)":      kalk_value,
             "nFK (mm)":                    nfk_text,
-            "Kapillar-Rate (mm/d)":        kap_text
+            "Kapillar-Rate (mm/d)":        kap_text,
+            "20tägiger-Kapillarer-Aufstieg": gesamt_20
         }])
         st.dataframe(result_df, use_container_width=True)
 
