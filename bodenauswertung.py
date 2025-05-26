@@ -313,11 +313,7 @@ _KAP_TABLE = pd.DataFrame([
 # — Spaltenbreiten in dm für die Suche —
 _KAP_DMS = [2,3,4,5,6,8,10,12,14,17,20]
 def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float | None:
-    """
-    Berechnet die mittlere Kapillar-Aufstiegsrate (mm/d).
-    - sucht nach dem ersten Horizont, dessen 'hz' (case-insensitive) den Substring 'gr' enthält
-    """
-    # 1) Gr-Horizont finden (case-insensitive)
+     # 1) Gr-Horizont finden (case-insensitive)
     gr_horizont = next(
         (h for h in horizonte if isinstance(h.get("hz"), str) and "gr" in h["hz"].lower()),
         None
@@ -332,17 +328,20 @@ def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float | Non
     # 2) Abstand zur physiologischen Gründigkeit
     dist_cm = start_cm - physiogr
     if dist_cm <= 0:
-        return 0.0
+        # liegt der Gr-Horizont in oder oberhalb der physiologischen Tiefe,
+        # geben wir eine Rate von 5 mm/d zurück
+        return 5.0
 
+    # 3) Abstand in dm und nächste Spalte wählen
     dist_dm = dist_cm / 10
-
-    # 3) nächstliegende dm-Spalte wählen
     dm = min(_KAP_DMS, key=lambda x: abs(x - dist_dm))
 
-    # 4) Bodenart aus dem Gr-Horizont
+    # 4) Tabellenwert auslesen
     bod = str(gr_horizont.get("Bodenart", ""))
-    # substring-Match in der Tabelle
-    row = _KAP_TABLE[_KAP_TABLE["Bodenart"].str.lower().str.contains(bod.split()[0].lower(), na=False)]
+    row = _KAP_TABLE[
+        _KAP_TABLE["Bodenart"].str.lower()
+                  .str.contains(bod.split()[0].lower(), na=False)
+    ]
     if row.empty:
         return None
 
@@ -350,7 +349,7 @@ def kapillaraufstiegsrate(horizonte: list[dict], physiogr: float) -> float | Non
     if not isinstance(val, str) or not val.strip():
         return None
 
-    # 5) Komma → Punkt, in float
+    # 5) Komma → Punkt, dann float
     try:
         return float(val.replace(",", "."))
     except ValueError:
